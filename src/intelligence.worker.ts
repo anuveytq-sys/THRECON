@@ -16,12 +16,14 @@ const scope = self as unknown as { onmessage: ((event: MessageEvent<WorkerReques
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
+const createPipeline = pipeline as unknown as (task: Task, model: string, options: Record<string, unknown>) => Promise<PipelineFunction>;
+
 async function loadPipeline(task: Task, model: string, progress: (message: string) => void): Promise<PipelineFunction> {
   const useGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
   if (useGpu) {
     try {
       progress('Preparing WebGPU model runtime…');
-      return await pipeline(task, model, {
+      return await createPipeline(task, model, {
         device: 'webgpu',
         dtype: 'fp16',
         progress_callback: (event: { status?: string; file?: string; progress?: number }) => {
@@ -33,7 +35,7 @@ async function loadPipeline(task: Task, model: string, progress: (message: strin
     }
   }
   runtime = 'WASM / CPU';
-  return await pipeline(task, model, {
+  return await createPipeline(task, model, {
     dtype: 'q8',
     progress_callback: (event: { status?: string }) => {
       if (event.status === 'progress') progress('Downloading model weights…');
