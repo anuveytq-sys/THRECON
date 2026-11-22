@@ -1,0 +1,5 @@
+import type {ThreconProject} from './project';
+const DB='threcon-local',STORE='projects';
+function openDB():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});}
+export async function saveProject(p:ThreconProject):Promise<void>{const db=await openDB();await new Promise<void>((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(p,'current');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close();}
+export async function loadProject():Promise<ThreconProject|null>{const db=await openDB();const p=await new Promise<ThreconProject|null>((resolve,reject)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).get('current');r.onsuccess=()=>resolve((r.result as ThreconProject|undefined)??null);r.onerror=()=>reject(r.error)});db.close();return p;}
