@@ -19,7 +19,7 @@ env.useBrowserCache = true;
 const createPipeline = pipeline as unknown as (task: Task, model: string, options: Record<string, unknown>) => Promise<PipelineFunction>;
 
 async function loadPipeline(task: Task, model: string, progress: (message: string) => void): Promise<PipelineFunction> {
-  const useGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
+  const useGpu = typeof navigator !== 'undefined' && Boolean((navigator as unknown as { gpu?: unknown }).gpu);
   if (useGpu) {
     try {
       progress('Preparing WebGPU model runtime…');
@@ -29,7 +29,7 @@ async function loadPipeline(task: Task, model: string, progress: (message: strin
         progress_callback: (event: { status?: string; file?: string; progress?: number }) => {
           if (event.status === 'progress') progress('Downloading model weights…');
         },
-      }) as unknown as PipelineFunction;
+      });
     } catch {
       progress('WebGPU unavailable for this model; switching to WASM…');
     }
@@ -40,7 +40,7 @@ async function loadPipeline(task: Task, model: string, progress: (message: strin
     progress_callback: (event: { status?: string }) => {
       if (event.status === 'progress') progress('Downloading model weights…');
     },
-  }) as PipelineFunction;
+  });
 }
 
 scope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
