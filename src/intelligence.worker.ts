@@ -23,7 +23,8 @@ async function loadPipeline(task:Task,model:string,progress:(message:string)=>vo
  });
 }
 async function runDepth(image:RawImage,progress:(message:string)=>void):Promise<{width:number;height:number;data:Uint8Array}>{
- const isAppleMobile=typeof navigator!=='undefined'&&/iPhone|iPad|iPod/i.test(navigator.userAgent);\n const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
+ const isAppleMobile=typeof navigator!=='undefined'&&/iPhone|iPad|iPod/i.test(navigator.userAgent);
+ const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
  if(!depthPipeline&&hasGpu){try{progress('Preparing WebGPU depth model…');depthPipeline=await loadPipeline('depth-estimation',DEPTH_MODEL,progress,'webgpu');runtime='WebGPU';}catch{depthPipeline=null;}}
  if(!depthPipeline){progress('Loading depth model for WASM / CPU…');depthPipeline=await loadPipeline('depth-estimation',DEPTH_MODEL,progress,'wasm');runtime='WASM / CPU';}
  try{
