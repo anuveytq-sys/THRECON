@@ -157,3 +157,11 @@
 .recon-workspace{position:absolute;z-index:2;left:178px;right:12px;top:77px;bottom:58px;}
 @media(max-width:900px){.recon-workspace{left:64px;}}
 @media(max-width:620px){.recon-workspace{top:63px;left:52px;right:7px;bottom:53px;}}
+
+/* Mobile inference status: compact floating chip, never blanket the photo panel */
+.stage2-scan-overlay{inset:auto 10px 10px auto;width:min(270px,calc(100% - 20px));min-height:0;height:auto;padding:10px 12px;display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;justify-items:start;gap:5px 9px;border:1px solid #49dfff55;border-radius:9px;background:rgba(3,12,25,.94);box-shadow:0 8px 24px #0009,0 0 22px #28bce522;text-align:left;pointer-events:none;}
+.stage2-scan-overlay>svg{width:17px;height:17px;grid-row:1/3;}
+.stage2-scan-overlay>b{font-size:8px;line-height:1.4;overflow-wrap:anywhere;}
+.stage2-scan-overlay>div{grid-column:2;width:100%;height:3px;}
+.stage2-scan-overlay small{grid-column:2;font-size:6px;line-height:1.4;}
+@media(max-width:620px){.stage2-scan-overlay{right:7px;bottom:7px;width:min(230px,calc(100% - 14px));padding:8px 9px;}}
