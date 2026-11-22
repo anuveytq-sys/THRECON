@@ -31,7 +31,7 @@ jobs:
         with:
           path: dist
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     concurrency:
       group: threcon-pages-deploy
       queue: max
