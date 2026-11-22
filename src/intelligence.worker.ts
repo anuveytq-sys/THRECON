@@ -23,7 +23,8 @@ async function loadPipeline(task:Task,model:string,progress:(message:string)=>vo
  });
 }
 async function runDepth(image:RawImage,progress:(message:string)=>void):Promise<{width:number;height:number;data:Uint8Array}>{
- const hasGpu=typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
+ const isAppleMobile=typeof navigator!=='undefined'&&/iPhone|iPad|iPod/i.test(navigator.userAgent);
+ const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
  if(!depthPipeline&&hasGpu){try{progress('Preparing WebGPU depth model…');depthPipeline=await loadPipeline('depth-estimation',DEPTH_MODEL,progress,'webgpu');runtime='WebGPU';}catch{depthPipeline=null;}}
  if(!depthPipeline){progress('Loading depth model for WASM / CPU…');depthPipeline=await loadPipeline('depth-estimation',DEPTH_MODEL,progress,'wasm');runtime='WASM / CPU';}
  try{
@@ -72,8 +73,18 @@ scope.onmessage=async(event:MessageEvent<WorkerRequest>)=>{
   const image=await RawImage.fromBlob(blob);
   let depth:WorkerResult['depth'];
   let segments:SegmentPayload[]=[];
-  try{depth=await runDepth(image,progress);}catch(error){warnings.push('Depth model unavailable: '+(error instanceof Error?error.message:'unknown model error'));}
-  try{segments=await runSegmentation(image,progress);}catch(error){warnings.push('Segmentation model unavailable: '+(error instanceof Error?error.message:'unknown model error'));}
+  try{
+   depth=await runDepth(image,progress);
+   const elapsedMs=Math.round(performance.now()-started);
+   const earlyDepth={...depth,data:new Uint8Array(depth.data)};
+   scope.postMessage({id,type:'depth',depth:earlyDepth,depthModel:DEPTH_MODEL,runtime,elapsedMs},[earlyDepth.data.buffer as ArrayBuffer]);
+  }catch(error){warnings.push('Depth model unavailable: '+(error instanceof Error?error.message:'unknown model error'));}
+  try{
+   segments=await runSegmentation(image,progress);
+   const earlySegments=segments.map(segment=>({...segment,data:new Uint8Array(segment.data)}));
+   const transfers=earlySegments.map(segment=>segment.data.buffer as ArrayBuffer);
+   scope.postMessage({id,type:'segments',segments:earlySegments},transfers);
+  }catch(error){warnings.push('Segmentation model unavailable: '+(error instanceof Error?error.message:'unknown model error'));}
   if(!depth&&segments.length===0)throw new Error(warnings.join(' '));
   const result:WorkerResult={depth,segments,depthModel:DEPTH_MODEL,segmentationModel:SEGMENTATION_MODEL,runtime,elapsedMs:Math.round(performance.now()-started),warnings};
   const transfer:Transferable[]=[];
