@@ -9,10 +9,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-# Queue Pages deployments instead of canceling an active or pending deployment.
-concurrency:
-  group: threcon-pages-deploy
-  queue: max
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,6 +31,10 @@ jobs:
         with:
           path: dist
   deploy:
+    if: github.event_name != 'pull_request'
+    concurrency:
+      group: threcon-pages-deploy
+      queue: max
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
