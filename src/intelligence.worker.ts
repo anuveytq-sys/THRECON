@@ -12,7 +12,7 @@ let depthPipeline: PipelineFunction | null = null;
 let segmentationPipeline: PipelineFunction | null = null;
 let runtime = 'WASM / CPU';
 
-const scope = self as unknown as DedicatedWorkerGlobalScope;
+const scope = self as unknown as { onmessage: ((event: MessageEvent<WorkerRequest>) => void) | null; postMessage: (message: unknown, transfer?: Transferable[]) => void };
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
@@ -78,8 +78,8 @@ scope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       runtime, elapsedMs: Math.round(performance.now() - started), warnings,
     };
     const transfer: Transferable[] = [];
-    if (depth) transfer.push(depth.data.buffer);
-    for (const segment of segments) transfer.push(segment.data.buffer);
+    if (depth) transfer.push(depth.data.buffer as ArrayBuffer);
+    for (const segment of segments) transfer.push(segment.data.buffer as ArrayBuffer);
     scope.postMessage({ id, type: 'complete', result }, transfer);
   } catch (error) {
     scope.postMessage({ id, type: 'error', message: error instanceof Error ? error.message : 'Visual intelligence failed to initialize.' });
