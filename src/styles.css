@@ -89,3 +89,28 @@
 .stage2-studio-list span{font:7px var(--mono);color:#718ba0}
 @media(max-width:900px){.stage2-rail{width:48px;padding:9px 5px}.stage2-rail .rail-label,.stage2-rail .env-button span,.stage2-rail .env-button small,.stage2-rail .rail-foot span:last-child{display:none}.stage2-rail .env-button{justify-content:center;padding:0}.stage2-rail .rail-foot{justify-content:center;padding:10px 0}.stage2-main,.stage2-studio{left:64px}.stage2-content{grid-template-columns:minmax(0,1fr) 205px}.stage2-main-meta{gap:7px;font-size:6px}}
 @media(max-width:620px){.stage2-rail{top:62px;bottom:52px;left:7px;width:39px}.stage2-main,.stage2-studio{top:63px;left:52px;right:7px;bottom:53px}.stage2-main-head{height:31px;padding:0 4px}.stage2-main-head strong{font-size:8px}.stage2-main-meta{display:none}.stage2-content{grid-template-columns:minmax(0,1fr);gap:0}.stage2-side{display:none}.stage2-view-tabs{height:36px;padding:3px}.stage2-view-tabs button{min-width:65px;font-size:6px}.stage2-viewer-foot{height:24px;font-size:5px;padding:0 5px}.stage2-viewer-top{height:28px;padding:0 7px;font-size:6px}.stage2-dropzone{min-height:180px;padding:14px}.stage2-dropzone b{font-size:7px}.stage2-studio-head strong{font-size:8px}.stage2-studio-actions button,.stage2-file-button{font-size:6px;padding:0 5px}.stage2-studio-tools{gap:3px}.stage2-studio-tools button{font-size:6px;padding:0 5px}.stage2-studio-tools span{width:100%}}
+
+/* THRECON visual refinement — layered holographic depth, restrained motion */
+.app-shell:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(#52c8ed0a 1px,transparent 1px),linear-gradient(90deg,#52c8ed0a 1px,transparent 1px);background-size:42px 42px;mask-image:radial-gradient(ellipse at center,#000 8%,transparent 82%);opacity:.35;animation:threcon-grid-drift 36s linear infinite}
+@keyframes threcon-grid-drift{to{background-position:42px 42px}}
+.topbar,.environment-rail,.left-panel,.right-panel,.stage2-rail,.stage2-viewer,.stage2-side,.bottom-bar{box-shadow:0 18px 45px #0007,inset 0 1px #e0faff12,inset 0 -1px #2aa9d20b,0 0 25px #2db9e90c}
+.brand-mark,.rail-orb,.stage2-drop-icon{filter:drop-shadow(0 0 9px #43d9ff45)}
+.viewport-host,.stage2-viewer,.stage2-studio-view{isolation:isolate}
+.viewport-host:before,.stage2-viewer:before,.stage2-studio-view:before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:linear-gradient(135deg,#55dfff12,transparent 25%,transparent 72%,#655bff0c);box-shadow:inset 0 0 0 1px #a6efff08,inset 0 0 55px #1aa5d00b}
+.stage2-viewer-top,.stage2-studio-head{position:relative}
+.stage2-viewer-top:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,#43dfff70,#8375ff65,transparent);opacity:.6}
+.stage2-dropzone{position:relative;overflow:hidden;box-shadow:inset 0 1px #c6f6ff12,0 15px 45px #0005,0 0 35px #28c4ef0c;transform:perspective(900px) rotateX(1deg);transition:border-color .25s,box-shadow .25s,transform .25s}
+.stage2-dropzone:before{content:"";position:absolute;inset:-60% -20%;pointer-events:none;background:linear-gradient(110deg,transparent 42%,#6de5ff0c 50%,transparent 58%);transform:translateX(-35%);animation:threcon-sheen 7s ease-in-out infinite}
+@keyframes threcon-sheen{50%,100%{transform:translateX(35%)}}
+.stage2-dropzone:hover{border-color:#62e4ff99;box-shadow:inset 0 1px #c6f6ff1c,0 18px 50px #0007,0 0 35px #28c4ef1e;transform:perspective(900px) rotateX(0deg) translateY(-2px)}
+.stage2-view-tabs button,.stage2-primary,.stage2-analyze,.stage2-secondary,.stage2-control-row button,.stage2-studio-actions button,.stage2-studio-tools button,.stage2-file-button,.quick-create button,.viewport-tools button{transition:background .18s,border-color .18s,color .18s,box-shadow .18s,transform .18s}
+.stage2-view-tabs button.active,.stage2-primary,.stage2-analyze{box-shadow:inset 0 1px #e0fbff20,0 4px 15px #25bde51a}
+.stage2-view-tabs button:hover:not(:disabled),.stage2-secondary:hover,.stage2-control-row button:hover,.stage2-studio-actions button:hover,.stage2-studio-tools button:hover,.stage2-file-button:hover,.quick-create button:hover{border-color:#65e2ff85;background:#2cb6dc25;color:#d2f7ff;box-shadow:0 0 16px #28c5ed18;transform:translateY(-1px)}
+.stage2-primary:hover:not(:disabled),.stage2-analyze:hover:not(:disabled){border-color:#7deaff;background:linear-gradient(100deg,#1caddb77,#655de155);box-shadow:0 0 22px #2ac9f044,inset 0 1px #e0fbff35;transform:translateY(-1px)}
+.stage2-side-title{padding-bottom:7px;border-bottom:1px solid #5bc9e51d}
+.stage2-stat-grid>div,.stage2-output-card,.stage2-provenance{box-shadow:inset 0 1px #d7f8ff0a,0 8px 18px #0002}
+.stage2-studio-view{box-shadow:inset 0 0 65px #1687ae12,0 18px 45px #0005}
+.stage2-scan-overlay{backdrop-filter:blur(5px)}
+.stage2-scan-overlay>div{box-shadow:0 0 12px #42dfff38}
+.stage2-badge{box-shadow:0 0 12px #4dd6b51c}
+@media(prefers-reduced-motion:reduce){.app-shell:before,.stage2-dropzone:before,.spin,.stage2-scan-overlay>div i{animation:none!important}*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
