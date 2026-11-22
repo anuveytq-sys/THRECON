@@ -1,7 +1,7 @@
 name: THRECON — Build & Deploy GitHub Pages
 on:
   push:
-    branches: [main, stage-1-sci-fi-studio]
+    branches: [main, stage-1-sci-fi-studio, stage-2-photo-intelligence]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --onnxruntime-node-install-cuda=skip --no-audit --no-fund
       - name: Type-check
         run: npm run typecheck
       - name: Unit tests
@@ -31,7 +31,7 @@ jobs:
         with:
           path: dist
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     concurrency:
       group: threcon-pages-deploy
       queue: max
