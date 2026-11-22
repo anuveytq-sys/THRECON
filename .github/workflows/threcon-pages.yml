@@ -1,7 +1,7 @@
 name: THRECON — Build & Deploy GitHub Pages
 on:
   push:
-    branches: [main, stage-1-sci-fi-studio]
+    branches: [main, stage-1-sci-fi-studio, stage-2-photo-intelligence]
   pull_request:
     branches: [main]
   workflow_dispatch:
