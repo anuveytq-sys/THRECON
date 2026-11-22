@@ -62,7 +62,7 @@
 .stage2-provenance p{font-size:7px;line-height:1.6;color:#7f99ad;margin:5px 0 0}
 .stage2-scan-overlay{position:absolute;inset:0;z-index:4;background:#020812dc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#86eaff;font:8px var(--mono);text-align:center;padding:20px}
 .stage2-scan-overlay>div{width:min(260px,70%);height:4px;border-radius:4px;background:#1b3347;overflow:hidden}
-.stage2-scan-overlay>div i{display:block;height:100%;background:#4ddfff;box-shadow:0 0 12px #4ddfff;transition:width .25s}
+.stage2-scan-overlay>div i{display:block;width:34%;height:100%;background:#4ddfff;box-shadow:0 0 12px #4ddfff;animation:stage2progress 1.5s ease-in-out infinite alternate}@keyframes stage2progress{from{transform:translateX(0)}to{transform:translateX(190%)}}
 .stage2-scan-overlay small{color:#6d879e}
 .spin{animation:stage2spin 1s linear infinite}@keyframes stage2spin{to{transform:rotate(360deg)}}
 .stage2-camera-overlay{position:absolute;inset:12px;z-index:5;background:#020710;border:1px solid #45c8e966;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:10px}
