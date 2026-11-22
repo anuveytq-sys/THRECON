@@ -27,7 +27,7 @@ async function loadPipeline(task: Task, model: string, progress: (message: strin
         progress_callback: (event: { status?: string; file?: string; progress?: number }) => {
           if (event.status === 'progress') progress('Downloading model weights…');
         },
-      }) as PipelineFunction;
+      }) as unknown as PipelineFunction;
     } catch {
       progress('WebGPU unavailable for this model; switching to WASM…');
     }
