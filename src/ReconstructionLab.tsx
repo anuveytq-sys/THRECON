@@ -3,7 +3,7 @@ import type {PointerEvent} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
-import {ArrowLeft,Box,Download,Expand,Focus,Grid3X3,Info,Move3D,Ruler,ScanLine,SlidersHorizontal} from 'lucide-react';
+import {ArrowLeft,Box,Download,Focus,Grid3X3,Info,Move3D,Ruler,ScanLine,SlidersHorizontal} from 'lucide-react';
 
 type DepthMap={width:number;height:number;data:Uint8Array};
 type Props={photoUrl:string;photoName:string;depth:DepthMap|null;onBack:()=>void};
@@ -16,6 +16,7 @@ export default function ReconstructionLab({photoUrl,photoName,depth,onBack}:Prop
  const [resolution,setResolution]=useState(160);
  const [wireframe,setWireframe]=useState(false);
  const [mode,setMode]=useState<'mesh'|'measure'>('mesh');
+ const [meshReady,setMeshReady]=useState(false);
  const [referenceCm,setReferenceCm]=useState('100');
  const [measure,setMeasure]=useState<{start:Point;end:Point}|null>(null);
  const [drag,setDrag]=useState<Point|null>(null);
@@ -29,7 +30,7 @@ export default function ReconstructionLab({photoUrl,photoName,depth,onBack}:Prop
   return {min,max,values:Array.from(depth.data,v=>(v-min)/span)};
  },[depth]);
  useEffect(()=>{
-  const node=host.current;if(!node||!photoUrl||!depth||!normalized)return;
+  const node=host.current;if(!node||!photoUrl||!depth||!normalized)return;setMeshReady(false);
   let renderer:THREE.WebGLRenderer;
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});}catch{node.dataset.error='webgl';return;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setSize(node.clientWidth,node.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;node.appendChild(renderer.domElement);
@@ -61,7 +62,7 @@ export default function ReconstructionLab({photoUrl,photoName,depth,onBack}:Prop
    const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.setIndex(indices);geometry.computeVertexNormals();
    const material=new THREE.MeshStandardMaterial({map:texture,side:THREE.DoubleSide,roughness:.82,metalness:.04,wireframe});
    const mesh=new THREE.Mesh(geometry,material);scene.add(mesh);
-   api.current={renderer,scene,camera,controls,mesh,geometry,texture};
+   api.current={renderer,scene,camera,controls,mesh,geometry,texture};setMeshReady(true);
   };
   image.src=photoUrl;
   let frame=0;const animate=()=>{frame=requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)};animate();
@@ -69,7 +70,7 @@ export default function ReconstructionLab({photoUrl,photoName,depth,onBack}:Prop
   const observer=new ResizeObserver(resize);observer.observe(node);
   return()=>{cancelAnimationFrame(frame);observer.disconnect();controls.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=Array.isArray(o.material)?o.material:[o.material];m.forEach(v=>v.dispose())}});renderer.dispose();renderer.domElement.remove();api.current=null;};
  },[photoUrl,depth,normalized,resolution]);
- useEffect(()=>{const a=api.current;if(!a?.mesh||!a.geometry)return;const p=a.geometry.attributes.position as THREE.BufferAttribute;for(let i=0;i<p.count;i++){const x=i%(resolution+1),y=Math.floor(i/(resolution+1));const cols=resolution,rows=Math.max(8,Math.round(resolution*(depth?.height??1)/(depth?.width??1)));const sx=Math.min((depth?.width??1)-1,Math.round(x/cols*((depth?.width??1)-1)));const sy=Math.min((depth?.height??1)-1,Math.round(y/rows*((depth?.height??1)-1)));p.setZ(i,((normalized?.values[sy*(depth?.width??1)+sx]??.5)-.5)*strength);}p.needsUpdate=true;a.geometry.computeVertexNormals();(a.mesh.material as THREE.MeshStandardMaterial).wireframe=wireframe;},[strength,wireframe,resolution,depth,normalized]);
+ useEffect(()=>{const a=api.current;if(!a?.mesh||!a.geometry)return;const p=a.geometry.attributes.position as THREE.BufferAttribute;for(let i=0;i<p.count;i++){const x=i%(resolution+1),y=Math.floor(i/(resolution+1));const cols=resolution,rows=Math.max(8,Math.round(resolution*(depth?.height??1)/(depth?.width??1)));const sx=Math.min((depth?.width??1)-1,Math.round(x/cols*((depth?.width??1)-1)));const sy=Math.min((depth?.height??1)-1,Math.round(y/rows*((depth?.height??1)-1)));p.setZ(i,((normalized?.values[sy*(depth?.width??1)+sx]??.5)-.5)*strength);}p.needsUpdate=true;a.geometry.computeVertexNormals();(a.mesh.material as THREE.MeshStandardMaterial).wireframe=wireframe;},[strength,wireframe,resolution,depth,normalized,meshReady]);
  useEffect(()=>{const canvas=measureCanvas.current;if(!canvas||!photoUrl)return;let cancelled=false;const image=new Image();image.onload=()=>{if(cancelled)return;const maxW=1000,scale=Math.min(1,maxW/image.naturalWidth);canvas.width=Math.round(image.naturalWidth*scale);canvas.height=Math.round(image.naturalHeight*scale);setImageSize([image.naturalWidth,image.naturalHeight]);const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(image,0,0,canvas.width,canvas.height);if(measure){ctx.strokeStyle='#42eaff';ctx.lineWidth=2;ctx.fillStyle='rgba(40,210,255,.13)';const x=Math.min(measure.start.x,measure.end.x),y=Math.min(measure.start.y,measure.end.y),w=Math.abs(measure.end.x-measure.start.x),h=Math.abs(measure.end.y-measure.start.y);ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.fillStyle='#e9fbff';ctx.font='bold 13px sans-serif';ctx.fillText(Math.round(w/scale)+' × '+Math.round(h/scale)+' px',x+6,Math.max(16,y-7));}};image.src=photoUrl;return()=>{cancelled=true}},[photoUrl,measure]);
  const pointer=(e:PointerEvent<HTMLCanvasElement>,end:boolean)=>{const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)*e.currentTarget.width/r.width,y=(e.clientY-r.top)*e.currentTarget.height/r.height;const point={x,y};if(!end){setDrag(point);setMeasure({start:point,end:point});e.currentTarget.setPointerCapture(e.pointerId);}else if(drag){setMeasure({start:drag,end:point});setDrag(null)}};
  const exportGlb=async()=>{const a=api.current;if(!a?.mesh){return}try{const exporter=new GLTFExporter();const result=await exporter.parseAsync(a.scene,{binary:true,onlyVisible:true});const blob=new Blob([result as ArrayBuffer],{type:'model/gltf-binary'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='threcon-photo-reconstruction.glb';link.click();URL.revokeObjectURL(url);}catch(error){console.error(error);}};
