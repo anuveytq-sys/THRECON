@@ -165,3 +165,61 @@
 .stage2-scan-overlay>div{grid-column:2;width:100%;height:3px;}
 .stage2-scan-overlay small{grid-column:2;font-size:6px;line-height:1.4;}
 @media(max-width:620px){.stage2-scan-overlay{right:7px;bottom:7px;width:min(230px,calc(100% - 14px));padding:8px 9px;}}
+
+
+/* VIRTUAL ITG Stage 3 reconstruction workspace */
+.stage3-workspace{position:absolute;z-index:3;left:178px;right:12px;top:77px;bottom:58px;display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0;overflow:auto;padding:8px 4px 10px;scrollbar-width:thin;scrollbar-color:#27506b transparent}
+.stage3-header,.stage3-toolbar,.stage3-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none}
+.stage3-brand{display:flex;flex-direction:column;gap:3px;min-width:0}
+.stage3-kicker{font:8px var(--mono);letter-spacing:.15em;color:#65dfff}
+.stage3-brand strong{font-size:13px;letter-spacing:.13em;color:#d9f7ff}
+.stage3-brand small{font:7px var(--mono);color:#829bb0;overflow-wrap:anywhere}
+.stage3-header-actions,.stage3-toolbar-actions,.stage3-modes{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.stage3-engine-pill{display:flex;align-items:center;gap:6px;border:1px solid #e7ad4d55;background:#8e5a1d1a;border-radius:20px;padding:6px 9px;font:7px var(--mono);color:#e9c48b}
+.stage3-engine-pill i,.stage3-footer i{width:6px;height:6px;border-radius:50%;background:#f2b85c;box-shadow:0 0 8px #f2b85c}
+.stage3-engine-pill.online{border-color:#48e6bd55;background:#19a77c18;color:#8ff0d2}
+.stage3-engine-pill.online i,.stage3-footer i{background:#4cf0bb;box-shadow:0 0 8px #4cf0bb}
+.stage3-back,.stage3-toolbar button,.stage3-modes button,.stage3-tool-button,.stage3-primary-button,.stage3-empty button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:31px;padding:0 10px;border:1px solid #4cbad344;border-radius:7px;background:#10263bba;color:#a9c8db;font:7px var(--mono);letter-spacing:.07em;cursor:pointer}
+.stage3-toolbar{border:1px solid #54c6e52b;background:#0b1828a8;border-radius:9px;padding:6px}
+.stage3-modes button.active{border-color:#45dcff8a;background:#1d789044;color:#d6faff;box-shadow:0 0 15px #29c5ef21}
+.stage3-toolbar button:hover,.stage3-back:hover,.stage3-tool-button:hover:not(:disabled){border-color:#67e6ff88;color:#e0fbff;background:#1b526c80}
+.stage3-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:10px;flex:1;min-height:390px}
+.stage3-viewport{position:relative;min-width:0;min-height:390px;overflow:hidden;border:1px solid #4abddd45;border-radius:12px;background:radial-gradient(ellipse at 50% 40%,#12364c,#050b16 72%);box-shadow:inset 0 0 55px #1aa5d00b,0 15px 40px #0005}
+.stage3-viewport canvas{display:block;width:100%;height:100%;touch-action:none}
+.stage3-hud{position:absolute;z-index:2;top:11px;left:13px;right:13px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;color:#a0d9ed;font:7px var(--mono);letter-spacing:.1em;text-shadow:0 0 10px #000}
+.stage3-hud span{display:flex;align-items:center;gap:6px}
+.stage3-source-card{position:absolute;z-index:2;left:12px;bottom:12px;width:112px;padding:5px;border:1px solid #59d8f766;border-radius:8px;background:#06111fe8;box-shadow:0 8px 22px #0008;pointer-events:none}
+.stage3-source-card img{display:block;width:100%;height:68px;object-fit:cover;border-radius:4px}
+.stage3-source-card span{display:block;padding-top:4px;text-align:center;color:#91cfe4;font:6px var(--mono);letter-spacing:.12em}
+.stage3-viewport-note{position:absolute;z-index:2;right:10px;bottom:10px;max-width:min(58%,420px);padding:6px 8px;border:1px solid #4ac7e53a;border-radius:6px;background:#06111edb;color:#91adbf;font:7px var(--mono);line-height:1.5}
+.stage3-inspector{display:flex;flex-direction:column;gap:9px;min-width:0;min-height:0;overflow:auto;padding:12px;border:1px solid #4abddd35;border-radius:11px;scrollbar-width:thin;scrollbar-color:#27506b transparent}
+.stage3-panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid #5bc9e51d;color:#c6e6f5;font-size:8px;letter-spacing:.08em}
+.stage3-panel-title span{display:flex;align-items:center;gap:6px}
+.stage3-panel-title svg{color:#67dfff}
+.stage3-panel-title b{font:7px var(--mono);color:#6dcfe8}
+.stage3-tool-group{display:flex;flex-direction:column;gap:8px}
+.stage3-tool-group label,.stage3-inspector>label{display:flex;justify-content:space-between;gap:8px;color:#91b5c9;font:7px var(--mono);letter-spacing:.08em}
+.stage3-tool-group label b,.stage3-inspector>label b{color:#d2f4ff;font-weight:500}
+.stage3-tool-group input[type=range],.stage3-inspector>input[type=range]{width:100%;accent-color:#37dfff}
+.stage3-tool-button,.stage3-primary-button{width:100%;min-height:32px;justify-content:center}
+.stage3-primary-button{border-color:#4adfff80;background:linear-gradient(100deg,#147cae66,#5147a555);color:#d4f8ff;box-shadow:0 0 15px #28bce51c}
+.stage3-primary-button:disabled,.stage3-tool-button:disabled{opacity:.35;cursor:not-allowed}
+.stage3-help{margin:0;color:#91aabc;font-size:9px;line-height:1.55}
+.stage3-file-list{display:flex;flex-direction:column;gap:4px;max-height:65px;overflow:auto;color:#83b6ca;font:7px var(--mono)}
+.stage3-engine-status{display:flex;align-items:flex-start;gap:7px;padding:8px;border:1px solid #4cbddd29;border-radius:7px;background:#071523aa;color:#91adbf;font:7px/1.5 var(--mono);overflow-wrap:anywhere}
+.stage3-engine-status svg{flex:none;color:#6ddfff}
+.stage3-divider{height:1px;background:#5bbddd25;margin:2px 0}
+.stage3-stats{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+.stage3-stats span{display:flex;justify-content:space-between;gap:8px;color:#7f9eb2;font:7px var(--mono)}
+.stage3-stats b{color:#c6e9f7;font-weight:500;text-align:right}
+.stage3-footer{min-height:24px;color:#83a1b7;font:7px var(--mono);letter-spacing:.06em}
+.stage3-footer span:first-child{display:flex;align-items:center;gap:7px;overflow-wrap:anywhere}
+.stage3-footer i{flex:none}
+.stage3-empty{flex:1;min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;border:1px dashed #46c5e94a;border-radius:12px;background:#08172a99;padding:24px}
+.stage3-empty svg{color:#55ddff}.stage3-empty h2{margin:0;color:#d8f8ff;font-size:14px;letter-spacing:.15em}.stage3-empty p{max-width:500px;color:#9bb3c5;font-size:10px;line-height:1.7}
+.stage3-spin{animation:stage3-rotate 1s linear infinite}@keyframes stage3-rotate{to{transform:rotate(360deg)}}
+@media(max-width:900px){.stage3-workspace{left:64px}.stage3-layout{grid-template-columns:minmax(0,1fr) 235px}.stage3-viewport{min-height:340px}}
+@media(max-width:700px){.stage3-workspace{left:54px;right:7px;top:63px;bottom:53px;padding:5px 2px 8px}.stage3-layout{grid-template-columns:minmax(0,1fr);min-height:0}.stage3-viewport{min-height:44vh}.stage3-inspector{max-height:none}.stage3-toolbar{align-items:flex-start;flex-direction:column}.stage3-header{align-items:flex-start}.stage3-engine-pill{max-width:150px;line-height:1.4}.stage3-brand strong{font-size:11px}.stage3-hud span:last-child{display:none}}
+@media(max-width:420px){.stage3-header-actions{flex-direction:column;align-items:flex-end}.stage3-source-card{width:86px}.stage3-source-card img{height:52px}.stage3-viewport-note{max-width:65%;font-size:6px}.stage3-modes button{font-size:6px;padding:0 6px}}
+/* Keep the source photo dominant on narrow screens; the inspector remains available below the image. */
+@media(max-width:700px){.stage2-content{grid-template-columns:minmax(0,1fr);}.stage2-side{display:none}.stage2-viewer{min-height:0}.stage2-main{left:54px;right:7px;top:63px;bottom:53px}.stage2-image-area{min-height:38vh}.stage2-photo-canvas{max-width:100%;max-height:100%;width:auto;height:auto}}
