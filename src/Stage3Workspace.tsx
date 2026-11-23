@@ -2,7 +2,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
-import {ArrowLeft,Box,Check,Cloud,Download,FileImage,Layers3,LoaderCircle,Network,Orbit,Plus,RefreshCw,ScanLine,SlidersHorizontal,Sparkles,Upload,Workflow} from 'lucide-react';
+import {ArrowLeft,Box,Cloud,Download,FileImage,Layers3,LoaderCircle,Network,Orbit,Plus,RefreshCw,ScanLine,SlidersHorizontal,Sparkles,Workflow} from 'lucide-react';
 
 type DepthMap={width:number;height:number;data:Uint8Array};
 type CloudData={positions:Float32Array;colors:Float32Array;confidence?:Float32Array;source:'single-view-depth'|'vggt-world-points';views:number};
