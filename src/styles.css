@@ -260,3 +260,12 @@
 }
 @media(max-width:420px){.stage3-source-pane{height:31vh;min-height:190px}.stage3-viewport{height:40vh;min-height:250px}}
 
+
+/* Stage 2: per-region relative-depth diagnostics */
+.stage2-depth-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 5px}
+.stage2-depth-cell{min-width:0;padding:7px 6px;border:1px solid rgba(71,223,255,.16);border-radius:7px;background:linear-gradient(145deg,rgba(22,59,83,.42),rgba(7,16,30,.55));display:flex;flex-direction:column;gap:3px}
+.stage2-depth-cell small{font:8px var(--mono);color:#718da5}
+.stage2-depth-cell b{font:600 11px var(--mono);color:#c8f5ff}
+.stage2-depth-cell i{height:4px;display:block;overflow:hidden;border-radius:8px;background:#132a3b}
+.stage2-depth-cell i span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#2779d8,#4ce3ed,#b6efff);box-shadow:0 0 8px #43dfff66}
+.stage2-depth-cell em{font:7px var(--mono);font-style:normal;color:#6e8297}
