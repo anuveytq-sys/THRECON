@@ -65,6 +65,7 @@ async function runLocalBackendDepth(blob:Blob,progress:(message:string)=>void):P
  }finally{clearTimeout(timeout);}
 }
 async function inferDepth(image:RawImage,progress:(message:string)=>void):Promise<DepthPayload>{
+ progress('Running Depth Anything V2 per-pixel inference…');
  if(!depthPipeline)throw new Error('Depth pipeline was not initialized.');
  const output=await depthPipeline(image);
  const raw=output?.depth as RawImage|undefined;
