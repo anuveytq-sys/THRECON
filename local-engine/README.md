@@ -39,7 +39,7 @@ python -m uvicorn app.main:app --app-dir local-engine --host 127.0.0.1 --port 80
 
 For the best PyTorch installation command for your operating system and GPU, use the official PyTorch installation selector before installing torch and torchvision.
 
-The first reconstruction request downloads the facebook/VGGT-1B model weights. Keep the server bound to 127.0.0.1; do not expose this development API directly to the public internet.
+The first depth request downloads Depth Anything V2 Small weights. The first multi-view reconstruction request downloads the facebook/VGGT-1B model weights. Keep the server bound to 127.0.0.1; do not expose this development API directly to the public internet.
 
 ## Endpoints
 
@@ -47,7 +47,6 @@ The local API loads the depth model on the first `/v1/vision/depth` request. The
 
 - GET http://127.0.0.1:8000/health
 - POST http://127.0.0.1:8000/v1/vision/depth (multipart field `image`; returns a base64 PNG relative-depth map)
-- GET http://127.0.0.1:8000/v1/reconstruction/capabilities
 - GET http://127.0.0.1:8000/v1/reconstruction/capabilities
 - POST http://127.0.0.1:8000/v1/reconstruction/vggt
 
