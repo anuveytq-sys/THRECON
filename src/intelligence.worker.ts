@@ -16,7 +16,7 @@ const scope=self as unknown as {onmessage:((event:MessageEvent<WorkerRequest>)=>
 env.allowLocalModels=false;
 env.useBrowserCache=true;
 // Safari/iOS may not expose cross-origin-isolated WASM threads; single-thread WASM is slower but broadly compatible.
-try{env.backends.onnx.wasm.numThreads=1;env.backends.onnx.wasm.proxy=false;}catch{}
+try{const wasmBackend=env.backends.onnx.wasm;if(wasmBackend){wasmBackend.numThreads=1;wasmBackend.proxy=false;}}catch{}
 const createPipeline=pipeline as unknown as (task:Task,model:string,options:Record<string,unknown>)=>Promise<PipelineFunction>;
 
 async function loadPipeline(task:Task,model:string,progress:(message:string)=>void,device:'webgpu'|'wasm'):Promise<PipelineFunction>{
