@@ -1,6 +1,6 @@
 # VIRTUAL ITG Local Spatial API
 
-This optional local service connects Stage 3 to the official VGGT model for multi-view camera estimation and shared world-space point maps. The browser Studio still supports single-photo depth-derived meshes, point clouds and Gaussian-style PLY export without this service.
+This optional local service provides a real Depth Anything V2 backend for Stage 2 and connects Stage 3 to the official VGGT model for multi-view camera estimation and shared world-space point maps. The browser Studio still has a browser-side inference fallback and single-photo depth-derived meshes, point clouds and Gaussian-style PLY export.
 
 ## Requirements
 
@@ -43,7 +43,11 @@ The first reconstruction request downloads the facebook/VGGT-1B model weights. K
 
 ## Endpoints
 
+The local API loads the depth model on the first `/v1/vision/depth` request. The first request therefore downloads model weights and can take longer than later requests. The returned depth PNG is a normalized relative-depth visualization, not an absolute-distance map.
+
 - GET http://127.0.0.1:8000/health
+- POST http://127.0.0.1:8000/v1/vision/depth (multipart field `image`; returns a base64 PNG relative-depth map)
+- GET http://127.0.0.1:8000/v1/reconstruction/capabilities
 - GET http://127.0.0.1:8000/v1/reconstruction/capabilities
 - POST http://127.0.0.1:8000/v1/reconstruction/vggt
 
@@ -51,7 +55,9 @@ The POST endpoint accepts one to eight images multipart fields and a confidence_
 
 ## Hardware and accuracy notes
 
-- The Stage 2 browser depth model and Stage 3 single-photo mesh are separate from VGGT.
+- Stage 2 first probes the optional local `/v1/vision/depth` endpoint with a short timeout, then falls back to the browser Transformers.js ONNX model. The local endpoint lazily loads `depth-anything/Depth-Anything-V2-Small-hf`.
+- The browser worker uses the Apache-2.0 `onnx-community/depth-anything-v2-small-ONNX` model and the documented `Xenova/detr-resnet-50-panoptic` segmentation model.
+- The local Python service and browser model are separate inference runtimes; GitHub Pages serves only the frontend and cannot run Python inference.
 - Multi-view fusion is only marked complete after this service returns actual VGGT world points.
 - VGGT-1B is a large model. The service checks currently available system memory before CPU inference and returns a clear error rather than deliberately starting when less than 4 GB is available.
 - A single photograph cannot determine absolute scale or reveal the exact geometry of hidden surfaces.
