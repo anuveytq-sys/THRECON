@@ -15,8 +15,11 @@ from PIL import Image
 
 try:
     from transformers import pipeline as hf_pipeline
-except Exception:
+except Exception as exc:
     hf_pipeline = None
+    TRANSFORMERS_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
+else:
+    TRANSFORMERS_IMPORT_ERROR = None
 
 try:
     from vggt.models.vggt import VGGT
@@ -25,7 +28,7 @@ except Exception:
     VGGT = None
     load_and_preprocess_images = None
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 MAX_IMAGES = 8
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -72,7 +75,7 @@ def load_depth_model():
     if hf_pipeline is None:
         raise RuntimeError("Python transformers is not installed. Install local-engine/requirements.txt.")
     device = choose_device()
-    pipeline_device = 0 if device == "cuda" else ("mps" if device == "mps" else -1)
+    pipeline_device = 0 if device == "cuda" else (torch.device("mps") if device == "mps" else -1)
     model = hf_pipeline("depth-estimation", model=DEPTH_MODEL, device=pipeline_device)
     return model, device
 
@@ -88,6 +91,7 @@ def health():
         "vggt_model_loaded": load_model.cache_info().currsize > 0,
         "depth_backend_installed": hf_pipeline is not None,
         "depth_model_loaded": load_depth_model.cache_info().currsize > 0,
+        "depth_backend_error": TRANSFORMERS_IMPORT_ERROR,
         "device": choose_device(),
         "message": (
             "VGGT package available; model weights load on the first reconstruction request."
@@ -111,6 +115,7 @@ def capabilities():
         "gaussian_splat_ply": "browser-stage-3-approximation",
         "multi_view_vggt": VGGT is not None,
         "depth_anything_v2_backend": hf_pipeline is not None,
+        "depth_backend_error": TRANSFORMERS_IMPORT_ERROR,
         "depth_model": DEPTH_MODEL,
         "depth_fusion": "VGGT shared world-space point maps when the local model is available",
         "max_images": MAX_IMAGES,
@@ -128,10 +133,16 @@ async def estimate_depth(image: UploadFile = File(...)):
         source.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
         model, device = load_depth_model()
         prediction = model(source)
-        depth_image = prediction.get("depth")
-        if depth_image is None:
-            raise RuntimeError("Depth Anything V2 returned no depth map.")
-        depth_array = np.asarray(depth_image.convert("F"), dtype=np.float32)
+        predicted = prediction.get("predicted_depth")
+        if predicted is not None:
+            depth_array = predicted.detach().float().cpu().numpy().squeeze().astype(np.float32)
+        else:
+            depth_image = prediction.get("depth")
+            if depth_image is None:
+                raise RuntimeError("Depth Anything V2 returned neither predicted_depth nor depth.")
+            depth_array = np.asarray(depth_image.convert("F"), dtype=np.float32)
+        if depth_array.ndim != 2 or not depth_array.size:
+            raise RuntimeError(f"Depth model returned an invalid array shape: {depth_array.shape}.")
         finite = np.isfinite(depth_array)
         if not finite.any():
             raise RuntimeError("Depth Anything V2 returned no finite depth values.")
@@ -140,25 +151,39 @@ async def estimate_depth(image: UploadFile = File(...)):
         span = max(high - low, 1e-6)
         normalized = np.zeros(depth_array.shape, dtype=np.uint8)
         normalized[finite] = np.clip((depth_array[finite] - low) / span * 255.0, 0, 255).astype(np.uint8)
+        regions = []
+        height, width = normalized.shape
+        for row in range(3):
+            for col in range(3):
+                tile = normalized[
+                    row * height // 3 : max(row * height // 3 + 1, (row + 1) * height // 3),
+                    col * width // 3 : max(col * width // 3 + 1, (col + 1) * width // 3),
+                ]
+                regions.append({
+                    "region": row * 3 + col + 1,
+                    "mean_score": round(float(tile.mean()), 2),
+                    "min_score": int(tile.min()),
+                    "max_score": int(tile.max()),
+                })
         output = io.BytesIO()
-        Image.fromarray(normalized, mode="L").save(output, format="PNG", optimize=True)
+        Image.fromarray(normalized).save(output, format="PNG", optimize=True)
         return {
             "model": DEPTH_MODEL,
             "runtime": "local-python-" + device,
-            "width": int(normalized.shape[1]),
-            "height": int(normalized.shape[0]),
+            "width": int(width),
+            "height": int(height),
             "depth_min": low,
             "depth_max": high,
+            "regions": regions,
             "depth_png_base64": base64.b64encode(output.getvalue()).decode("ascii"),
-            "interpretation": "relative depth visualization; not a metric survey",
+            "interpretation": "normalized relative depth; values are not metric distances",
         }
     except HTTPException:
         raise
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Depth estimation failed: {exc}") from exc
-
+        raise HTTPException(status_code=500, detail=f"Depth estimation failed: {type(exc).__name__}: {exc}") from exc
 
 @app.post("/v1/reconstruction/vggt")
 async def reconstruct_vggt(
