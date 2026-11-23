@@ -11,6 +11,7 @@ const SEGMENTATION_MODEL='Xenova/detr-resnet-50-panoptic';
 let depthPipeline:PipelineFunction|null=null;
 let segmentationPipeline:PipelineFunction|null=null;
 let runtime='WASM / CPU';
+let depthModelUsed=DEPTH_MODEL;
 const scope=self as unknown as {onmessage:((event:MessageEvent<WorkerRequest>)=>void)|null;postMessage:(message:unknown,transfer?:Transferable[])=>void};
 env.allowLocalModels=false;
 env.useBrowserCache=true;
@@ -22,7 +23,7 @@ async function loadPipeline(task:Task,model:string,progress:(message:string)=>vo
  const gpu=device==='webgpu';
  return createPipeline(task,model,{
   ...(gpu?{device:'webgpu',dtype:'fp16'}:{device:'wasm',dtype:'q8'}),
-  progress_callback:(event:{status?:string})=>{if(event.status==='progress')progress('Downloading '+(task==='depth-estimation'?'depth':'segmentation')+' model weights…');}
+  progress_callback:(event:{status?:string;progress?:number;file?:string})=>{if(event.status==='progress_total'&&typeof event.progress==='number')progress('Downloading '+(task==='depth-estimation'?'depth':'segmentation')+' model · '+Math.round(event.progress)+'%');else if(event.status==='progress')progress('Downloading '+(event.file||'model')+'…');}
  });
 }
 async function runLocalBackendDepth(blob:Blob,progress:(message:string)=>void):Promise<{width:number;height:number;data:Uint8Array}|null>{
@@ -45,15 +46,15 @@ async function runLocalBackendDepth(blob:Blob,progress:(message:string)=>void):P
  }finally{clearTimeout(timeout);}
 }
 async function runDepth(image:RawImage,blob:Blob,progress:(message:string)=>void):Promise<{width:number;height:number;data:Uint8Array}>{
- const local=await runLocalBackendDepth(blob,progress);if(local){runtime='Local Python API';return local;}
+ const local=await runLocalBackendDepth(blob,progress);if(local){runtime='Local Python API';depthModelUsed='depth-anything/Depth-Anything-V2-Small-hf';return local;}
  const isAppleMobile=typeof navigator!=='undefined'&&/iPhone|iPad|iPod/i.test(navigator.userAgent);
  const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
  const loadErrors:string[]=[];
- if(!depthPipeline&&hasGpu){try{progress('Preparing WebGPU depth model…');depthPipeline=await loadPipeline('depth-estimation',DEPTH_MODEL,progress,'webgpu');runtime='WebGPU';}catch(error){loadErrors.push('WebGPU: '+(error instanceof Error?error.message:String(error)));depthPipeline=null;}}
+ if(!depthPipeline&&hasGpu){try{progress('Preparing WebGPU depth model…');depthPipeline=await loadPipeline('depth-estimation',DEPTH_MODEL,progress,'webgpu');runtime='WebGPU';depthModelUsed=DEPTH_MODEL;}catch(error){loadErrors.push('WebGPU: '+(error instanceof Error?error.message:String(error)));depthPipeline=null;}}
  if(!depthPipeline){
   progress('Loading Depth Anything V2 Small for WASM / CPU…');
   for(const model of DEPTH_MODELS){
-   try{depthPipeline=await loadPipeline('depth-estimation',model,progress,'wasm');runtime='WASM / CPU';break;}
+   try{depthPipeline=await loadPipeline('depth-estimation',model,progress,'wasm');runtime='WASM / CPU';depthModelUsed=model;break;}
    catch(error){loadErrors.push(model+': '+(error instanceof Error?error.message:String(error)));depthPipeline=null;}
   }
  }
@@ -69,7 +70,7 @@ async function runDepth(image:RawImage,blob:Blob,progress:(message:string)=>void
   progress('WebGPU inference failed; retrying on WASM / CPU…');
   depthPipeline=null;runtime='WASM / CPU';
   for(const model of DEPTH_MODELS){
-   try{depthPipeline=await loadPipeline('depth-estimation',model,progress,'wasm');break;}
+   try{depthPipeline=await loadPipeline('depth-estimation',model,progress,'wasm');depthModelUsed=model;break;}
    catch(loadError){loadErrors.push(model+': '+(loadError instanceof Error?loadError.message:String(loadError)));}
   }
   if(!depthPipeline)throw new Error('WebGPU failed and WASM fallback could not load. '+loadErrors.join(' | '));
@@ -112,7 +113,7 @@ scope.onmessage=async(event:MessageEvent<WorkerRequest>)=>{
    depth=await runDepth(image,blob,progress);
    const elapsedMs=Math.round(performance.now()-started);
    const earlyDepth={...depth,data:new Uint8Array(depth.data)};
-   scope.postMessage({id,type:'depth',depth:earlyDepth,depthModel:DEPTH_MODEL,runtime,elapsedMs},[earlyDepth.data.buffer as ArrayBuffer]);
+   scope.postMessage({id,type:'depth',depth:earlyDepth,depthModel:depthModelUsed,runtime,elapsedMs},[earlyDepth.data.buffer as ArrayBuffer]);
   }catch(error){warnings.push('Depth model unavailable: '+(error instanceof Error?error.message:'unknown model error'));}
   try{
    segments=await runSegmentation(image,progress);
@@ -121,7 +122,7 @@ scope.onmessage=async(event:MessageEvent<WorkerRequest>)=>{
    scope.postMessage({id,type:'segments',segments:earlySegments},transfers);
   }catch(error){warnings.push('Segmentation model unavailable: '+(error instanceof Error?error.message:'unknown model error'));}
   if(!depth&&segments.length===0)throw new Error(warnings.join(' '));
-  const result:WorkerResult={depth,segments,depthModel:DEPTH_MODEL,segmentationModel:SEGMENTATION_MODEL,runtime,elapsedMs:Math.round(performance.now()-started),warnings};
+  const result:WorkerResult={depth,segments,depthModel:depthModelUsed,segmentationModel:SEGMENTATION_MODEL,runtime,elapsedMs:Math.round(performance.now()-started),warnings};
   const transfer:Transferable[]=[];
   if(depth)transfer.push(depth.data.buffer as ArrayBuffer);
   for(const segment of segments)transfer.push(segment.data.buffer as ArrayBuffer);
