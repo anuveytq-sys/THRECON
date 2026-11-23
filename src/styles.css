@@ -221,5 +221,42 @@
 @media(max-width:900px){.stage3-workspace{left:64px}.stage3-layout{grid-template-columns:minmax(0,1fr) 235px}.stage3-viewport{min-height:340px}}
 @media(max-width:700px){.stage3-workspace{left:54px;right:7px;top:63px;bottom:53px;padding:5px 2px 8px}.stage3-layout{grid-template-columns:minmax(0,1fr);min-height:0}.stage3-viewport{min-height:44vh}.stage3-inspector{max-height:none}.stage3-toolbar{align-items:flex-start;flex-direction:column}.stage3-header{align-items:flex-start}.stage3-engine-pill{max-width:150px;line-height:1.4}.stage3-brand strong{font-size:11px}.stage3-hud span:last-child{display:none}}
 @media(max-width:420px){.stage3-header-actions{flex-direction:column;align-items:flex-end}.stage3-source-card{width:86px}.stage3-source-card img{height:52px}.stage3-viewport-note{max-width:65%;font-size:6px}.stage3-modes button{font-size:6px;padding:0 6px}}
-/* Keep the source photo dominant on narrow screens; the inspector remains available below the image. */
-@media(max-width:700px){.stage2-content{grid-template-columns:minmax(0,1fr);}.stage2-side{display:none}.stage2-viewer{min-height:0}.stage2-main{left:54px;right:7px;top:63px;bottom:53px}.stage2-image-area{min-height:38vh}.stage2-photo-canvas{max-width:100%;max-height:100%;width:auto;height:auto}}
+/* Mobile Stage 2: keep the photo and analysis tools in a scrollable column. */
+@media(max-width:700px){
+ .stage2-main{left:54px;right:7px;top:63px;bottom:53px}
+ .stage2-content{display:flex;flex-direction:column;gap:9px;overflow-y:auto;min-height:0;padding-bottom:8px}
+ .stage2-viewer{flex:none;min-height:68vh}
+ .stage2-image-area{flex:none;min-height:38vh;max-height:42vh}
+ .stage2-photo-canvas{max-width:100%;max-height:40vh;width:auto;height:auto;object-fit:contain}
+ .stage2-side{display:flex;flex-direction:column;flex:none;max-height:34vh;overflow-y:auto;padding:10px}
+ .stage2-view-tabs{flex-wrap:wrap}
+ .stage2-scan-overlay{inset:auto 8px 8px auto;width:min(220px,calc(100% - 16px));min-height:0;height:auto;padding:8px 10px;display:grid;grid-template-columns:18px minmax(0,1fr);gap:5px 8px;text-align:left;justify-items:start;pointer-events:none}
+}
+.stage3-layout{display:grid;grid-template-columns:190px minmax(0,1fr) 270px;gap:10px;flex:1;min-height:390px}
+.stage3-layout.without-source{grid-template-columns:minmax(0,1fr) 270px}
+.stage3-source-pane{display:flex;flex-direction:column;gap:9px;min-width:0;min-height:0;overflow:hidden;padding:10px;border:1px solid #4abddd35;border-radius:11px}
+.stage3-photo-measure{position:relative;display:grid;place-items:center;flex:1;min-height:180px;overflow:hidden;border:1px solid #4bc9ed35;border-radius:8px;background:#030914;touch-action:none;cursor:crosshair}
+.stage3-photo-measure img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.stage3-photo-measure svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.stage3-photo-measure rect{fill:#35dfff35;stroke:#6beaff;stroke-width:.004;vector-effect:non-scaling-stroke}
+.stage3-source-measure{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#a7d8e8;font:8px var(--mono)}
+.stage3-source-measure button{border:1px solid #4cbad344;border-radius:5px;background:#10263bba;color:#a9c8db;padding:4px 7px;font:7px var(--mono)}
+.stage3-photo-hint{color:#7f9eb2;font:7px/1.5 var(--mono)}
+.stage3-number-input{width:100%;min-height:30px;padding:6px 8px;border:1px solid #4cbad344;border-radius:6px;background:#061321;color:#d7f8ff;font:10px var(--mono)}
+.stage3-provenance-list{display:flex;flex-direction:column;gap:7px;color:#91b4c7;font:7px/1.4 var(--mono)}
+.stage3-provenance-list span{display:flex;align-items:center;gap:7px}
+.stage3-provenance-list i{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.stage3-provenance-list .observed{background:#54e6bb;box-shadow:0 0 8px #54e6bb66}
+.stage3-provenance-list .estimated{background:#5bdfff;box-shadow:0 0 8px #5bdfff66}
+.stage3-provenance-list .inferred{background:#c28cff;box-shadow:0 0 8px #c28cff66}
+@media(max-width:900px) and (min-width:701px){.stage3-layout{grid-template-columns:160px minmax(0,1fr) 225px}.stage3-layout.without-source{grid-template-columns:minmax(0,1fr) 225px}}
+@media(max-width:700px){
+ .stage3-layout,.stage3-layout.without-source{display:flex;flex-direction:column;min-height:0;gap:9px}
+ .stage3-source-pane{flex:none;height:34vh;min-height:210px;max-height:320px}
+ .stage3-photo-measure{min-height:0}
+ .stage3-viewport{flex:none;height:44vh;min-height:280px}
+ .stage3-inspector{flex:none;max-height:none;overflow:visible}
+ .stage3-workspace{overflow-y:auto}
+}
+@media(max-width:420px){.stage3-source-pane{height:31vh;min-height:190px}.stage3-viewport{height:40vh;min-height:250px}}
+
