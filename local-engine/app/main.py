@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import tempfile
 from functools import lru_cache
@@ -13,16 +14,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 try:
+    from transformers import pipeline as hf_pipeline
+except Exception:
+    hf_pipeline = None
+
+try:
     from vggt.models.vggt import VGGT
     from vggt.utils.load_fn import load_and_preprocess_images
 except Exception:
     VGGT = None
     load_and_preprocess_images = None
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
+DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 MAX_IMAGES = 8
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 MAX_RETURNED_POINTS = 30000
+MAX_DEPTH_IMAGE_BYTES = 15 * 1024 * 1024
 app = FastAPI(title="VIRTUAL ITG Local Spatial API", version=APP_VERSION)
 app.add_middleware(
     CORSMiddleware,
@@ -59,6 +67,16 @@ def load_model():
     return model, device
 
 
+@lru_cache(maxsize=1)
+def load_depth_model():
+    if hf_pipeline is None:
+        raise RuntimeError("Python transformers is not installed. Install local-engine/requirements.txt.")
+    device = choose_device()
+    pipeline_device = 0 if device == "cuda" else ("mps" if device == "mps" else -1)
+    model = hf_pipeline("depth-estimation", model=DEPTH_MODEL, device=pipeline_device)
+    return model, device
+
+
 @app.get("/health")
 def health():
     installed = VGGT is not None
@@ -67,7 +85,9 @@ def health():
         "version": APP_VERSION,
         "status": "online",
         "vggt_installed": installed,
-        "model_loaded": load_model.cache_info().currsize > 0,
+        "vggt_model_loaded": load_model.cache_info().currsize > 0,
+        "depth_backend_installed": hf_pipeline is not None,
+        "depth_model_loaded": load_depth_model.cache_info().currsize > 0,
         "device": choose_device(),
         "message": (
             "VGGT package available; model weights load on the first reconstruction request."
@@ -85,14 +105,59 @@ def health():
 def capabilities():
     return {
         "api_version": "v1",
-        "photo_to_depth": "browser-stage-2",
+        "photo_to_depth": "local-python-depth-anything-v2-or-browser-stage-2",
         "single_photo_mesh": "browser-stage-3",
         "point_cloud": "browser-stage-3",
         "gaussian_splat_ply": "browser-stage-3-approximation",
         "multi_view_vggt": VGGT is not None,
+        "depth_anything_v2_backend": hf_pipeline is not None,
+        "depth_model": DEPTH_MODEL,
         "depth_fusion": "VGGT shared world-space point maps when the local model is available",
         "max_images": MAX_IMAGES,
     }
+
+
+
+@app.post("/v1/vision/depth")
+async def estimate_depth(image: UploadFile = File(...)):
+    raw = await image.read()
+    if not raw or len(raw) > MAX_DEPTH_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image is empty or exceeds 15 MB.")
+    try:
+        source = Image.open(io.BytesIO(raw)).convert("RGB")
+        source.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+        model, device = load_depth_model()
+        prediction = model(source)
+        depth_image = prediction.get("depth")
+        if depth_image is None:
+            raise RuntimeError("Depth Anything V2 returned no depth map.")
+        depth_array = np.asarray(depth_image.convert("F"), dtype=np.float32)
+        finite = np.isfinite(depth_array)
+        if not finite.any():
+            raise RuntimeError("Depth Anything V2 returned no finite depth values.")
+        low = float(depth_array[finite].min())
+        high = float(depth_array[finite].max())
+        span = max(high - low, 1e-6)
+        normalized = np.zeros(depth_array.shape, dtype=np.uint8)
+        normalized[finite] = np.clip((depth_array[finite] - low) / span * 255.0, 0, 255).astype(np.uint8)
+        output = io.BytesIO()
+        Image.fromarray(normalized, mode="L").save(output, format="PNG", optimize=True)
+        return {
+            "model": DEPTH_MODEL,
+            "runtime": "local-python-" + device,
+            "width": int(normalized.shape[1]),
+            "height": int(normalized.shape[0]),
+            "depth_min": low,
+            "depth_max": high,
+            "depth_png_base64": base64.b64encode(output.getvalue()).decode("ascii"),
+            "interpretation": "relative depth visualization; not a metric survey",
+        }
+    except HTTPException:
+        raise
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Depth estimation failed: {exc}") from exc
 
 
 @app.post("/v1/reconstruction/vggt")
