@@ -1,7 +1,7 @@
 name: THRECON — Build & Deploy GitHub Pages
 on:
   push:
-    branches: [main, stage-1-sci-fi-studio, stage-2-photo-intelligence, stage-3-reconstruction-repair]
+    branches: [main, stage-1-sci-fi-studio, stage-2-photo-intelligence, stage-3-reconstruction-repair, fix-vision-inference-backend]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -23,6 +23,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Validate local Python API syntax
+        run: python -m compileall -q local-engine/app
       - name: Production build
         run: npm run build
       - name: Configure GitHub Pages
