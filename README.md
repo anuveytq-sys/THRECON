@@ -856,14 +856,21 @@ Suggested order for a solo developer. Timeline depends on available hardware and
 
 ### Phase 3 — Reconstruction Engine
 
-- Integrate VGGT.
-- Implement multi-view reconstruction.
-- Generate point clouds.
-- Fuse depth maps.
-- Extract editable meshes.
-- Implement Gaussian splats.
+- Integrate VGGT through the optional local VIRTUAL ITG Spatial API.
+- Accept a source photograph plus up to seven additional overlapping photographs.
+- Estimate camera geometry and shared world-space point maps with VGGT when the local model is installed and available.
+- Generate a browser-side point cloud from the Stage 2 depth map when VGGT is unavailable.
+- Fuse the multi-view world-space point maps returned by VGGT, with confidence filtering.
+- Extract an editable, textured, depth-derived mesh and export it as GLB.
+- Inspect point clouds and export PLY.
+- Preview Gaussian-style point splats and export a Gaussian-initialized PLY for later refinement.
+- Keep source imagery visible in the reconstruction viewport and make the inspector responsive on small screens.
 
-**Deliverable:** Image-to-3D and video-to-3D reconstruction.
+**Deliverable:** A working single-photo depth-to-3D path in the browser, plus an optional local VGGT multi-view reconstruction and world-space fusion path.
+
+**Implementation boundary:** A single-photo mesh is a view-conditioned surface, not a complete room scan. The browser Gaussian preview and PLY export initialize isotropic splats from points; they are not a trained anisotropic Gaussian-splat reconstruction. VGGT-1B is a large model and may require substantially more memory or a supported GPU; an 8 GB CPU-only computer can use the lightweight browser reconstruction, but may not be able to run VGGT locally.
+
+**Local engine setup:** See [local-engine/README.md](local-engine/README.md) for the FastAPI endpoint, installation instructions, health check and multi-view reconstruction request format.
 
 ### Phase 4 — Generative World Completion
 
