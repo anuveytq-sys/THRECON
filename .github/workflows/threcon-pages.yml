@@ -1,7 +1,7 @@
 name: THRECON — Build & Deploy GitHub Pages
 on:
   push:
-    branches: [main, stage-1-sci-fi-studio, stage-2-photo-intelligence, stage-3-reconstruction-repair, fix-vision-inference-backend, fix-depth-backend-regions, fix-mobile-depth-inference-and-reconstruction]
+    branches: [main, stage-1-sci-fi-studio, stage-2-photo-intelligence, stage-3-reconstruction-repair, fix-vision-inference-backend, fix-depth-backend-regions, fix-mobile-depth-inference-and-reconstruction, stage-4-generative-world-completion]
   pull_request:
     branches: [main]
   workflow_dispatch:
