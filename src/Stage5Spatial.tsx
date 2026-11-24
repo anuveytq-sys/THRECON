@@ -59,9 +59,9 @@ export default function Stage5Spatial({photoName,depth,segments,onBack}:Props){
   else if(/\b(show|make visible)\b/.test(q)){n.visible=true;commit(next,'SHOWING '+n.label);}
   else if(/\b(left|right|up|above|down|below|forward|back|backward)\b/.test(q)){
    const amount=/\bslightly\b/.test(q)?0.12:/\bfar\b|\ba lot\b/.test(q)?0.65:0.3;
-   if(/left/.test(q))n.position[0]-=amount;if(/right/.test(q))n.position[0]+=amount;
-   if(/up|above/.test(q))n.position[1]+=amount;if(/down|below/.test(q))n.position[1]-=amount;
-   if(/forward/.test(q))n.position[2]+=(amount);if(/back|backward/.test(q))n.position[2]-=amount;
+   if(/left/.test(q)){n.position[0]-=amount;n.box.x=clamp(n.box.x-amount/4,0,1-n.box.w)}if(/right/.test(q)){n.position[0]+=amount;n.box.x=clamp(n.box.x+amount/4,0,1-n.box.w)}
+   if(/up|above/.test(q)){n.position[1]+=amount;n.box.y=clamp(n.box.y-amount/3,0,1-n.box.h)}if(/down|below/.test(q)){n.position[1]-=amount;n.box.y=clamp(n.box.y+amount/3,0,1-n.box.h)}
+   if(/forward/.test(q)){n.position[2]+=amount;n.depth=clamp(n.depth+amount/10,0,1)}if(/back|backward/.test(q)){n.position[2]-=amount;n.depth=clamp(n.depth-amount/10,0,1)}
    commit(next,'MOVED '+n.label+' · '+n.position.map(v=>v.toFixed(2)).join(', '));
   }else if(/\b(bigger|larger|increase size|scale up)\b/.test(q)){n.box.w=clamp(n.box.w*1.15,.01,1);n.box.h=clamp(n.box.h*1.15,.01,1);commit(next,'SCALED UP '+n.label);}
   else if(/\b(smaller|reduce size|scale down)\b/.test(q)){n.box.w=clamp(n.box.w*.85,.01,1);n.box.h=clamp(n.box.h*.85,.01,1);commit(next,'SCALED DOWN '+n.label);}
