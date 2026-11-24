@@ -52,18 +52,18 @@ export default function Stage4Completion({photoUrl,photoName,depth,segments,onBa
     if(!host.current)return;
     const textureCanvas=document.createElement('canvas');textureCanvas.width=image.naturalWidth;textureCanvas.height=image.naturalHeight;const tc=textureCanvas.getContext('2d');if(!tc)return;tc.drawImage(image,0,0);
     const photoTexture=new THREE.CanvasTexture(textureCanvas);photoTexture.colorSpace=THREE.SRGBColorSpace;
-    const imagePlane=new THREE.Mesh(new THREE.PlaneGeometry(4.6,4.6*depth.height/depth.width),new THREE.MeshBasicMaterial({map:photoTexture,transparent:true,opacity:showObserved?1:0,side:THREE.DoubleSide,depthWrite:false}));imagePlane.position.set(0,0,.45);group.add(imagePlane);
+    const imagePlane=new THREE.Mesh(new THREE.PlaneGeometry(4.6,4.6*depth.height/depth.width),new THREE.MeshBasicMaterial({map:photoTexture,transparent:true,opacity:showObservedRef.current?1:0,side:THREE.DoubleSide,depthWrite:false}));imagePlane.position.set(0,0,.45);group.add(imagePlane);
     const thickness=variantRef.current==='conservative' ? .16 : variantRef.current==='expanded' ? .62 : .34;
     candidates.forEach((c)=>{
      const x=(c.box.x+c.box.w/2-.5)*4.6,y=(.5-c.box.y-c.box.h/2)*4.6*depth.height/depth.width;
      const w=Math.max(.12,c.box.w*4.6),h=Math.max(.12,c.box.h*4.6*depth.height/depth.width),z=(.5-c.depth)*1.6;
-     const front=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:'#65dfff',transparent:true,opacity:showObserved ? .14 : 0,side:THREE.DoubleSide,depthWrite:false}));front.position.set(x,y,z+.48);group.add(front);
+     const front=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:'#65dfff',transparent:true,opacity:showObservedRef.current ? .14 : 0,side:THREE.DoubleSide,depthWrite:false}));front.position.set(x,y,z+.48);group.add(front);
      let geometry:THREE.BufferGeometry;
      if(c.kind==='round')geometry=new THREE.SphereGeometry(1,24,16);
      else if(c.kind==='cylinder')geometry=new THREE.CylinderGeometry(.5,.5,1,20);
      else geometry=new THREE.BoxGeometry(1,1,1);
-     const back=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:'#6b8cff',emissive:'#162f75',emissiveIntensity:.5,transparent:true,opacity:showInferredRef.current ? .24 : 0,roughness:.62,metalness:.12,wireframe:variant==='conservative'}));
-     back.scale.set(w,h,thickness*(variant==='expanded' ? 1.65 : 1));back.position.set(x,y,z-thickness*.5);group.add(back);
+     const back=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:'#6b8cff',emissive:'#162f75',emissiveIntensity:.5,transparent:true,opacity:showInferredRef.current ? .24 : 0,roughness:.62,metalness:.12,wireframe:variantRef.current==='conservative'}));
+     back.scale.set(w,h,thickness*(variantRef.current==='expanded' ? 1.65 : 1));back.position.set(x,y,z-thickness*.5);group.add(back);
      const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),new THREE.LineBasicMaterial({color:'#64eaff',transparent:true,opacity:showInferredRef.current ? .85 : 0}));edges.scale.copy(back.scale);edges.position.copy(back.position);group.add(edges);
      const pin=new THREE.Mesh(new THREE.SphereGeometry(.035,8,8),new THREE.MeshBasicMaterial({color:c.confidence>.7?'#48efc0':'#ffc46b'}));pin.position.set(x-w/2,y+h/2,z+.55);group.add(pin);
     });
@@ -84,7 +84,7 @@ export default function Stage4Completion({photoUrl,photoName,depth,segments,onBa
     <label className="stage4-toggle"><input type="checkbox" checked={showObserved} onChange={e=>setShowObserved(e.target.checked)}/> SHOW OBSERVED SURFACES</label><label className="stage4-toggle"><input type="checkbox" checked={showInferred} onChange={e=>setShowInferred(e.target.checked)}/> SHOW INFERRED GEOMETRY</label>
     <div className="stage4-divider"/><h3><Layers3 size={14}/> OBJECT HYPOTHESES</h3>{candidates.length?candidates.map(c=><div className="stage4-object" key={c.id}><span>{c.label}</span><b>{Math.round(c.confidence*100)}% mask confidence</b><small>{c.kind.toUpperCase()} PRIOR · DEPTH {Math.round(c.depth*100)}/100</small></div>):<p>No usable segmentation masks. Run Stage 2 object analysis first.</p>}
     <div className="stage4-divider"/><h3><ShieldCheck size={14}/> EVIDENCE CONFIDENCE</h3><div className="stage4-confidence-grid">{Array.from({length:9},(_,i)=>{const c=candidates[Math.min(candidates.length-1,Math.floor(i*candidates.length/9))];const value=c?c.confidence:0;return <div key={i} title={c?c.label+' '+Math.round(value*100)+'%':'No object evidence'}><i style={{opacity:.25+value*.75}}/><span>{Math.round(value*100)}</span></div>})}</div>
-    <div className="stage4-divider"/><button className="stage4-primary" disabled={!depth||busy} onClick={()=>void exportWorld()}>{busy?<LoaderCircle size={14}/>:<Download size={14}/>} EXPORT COMPLETED WORLD · GLB</button><button className="stage4-secondary" onClick={downloadManifest}><Download size={14}/> EXPORT SCENEIR + CONFIDENCE JSON</button><button className="stage4-secondary" onClick={()=>{setVariant('balanced');setShowObserved(true);setShowInferred(true);setStatus('COMPLETION HYPOTHESES RESET')}}><RefreshCw size={14}/> RESET HYPOTHESES</button>
+    <div className="stage4-divider"/><button type="button" className="stage4-primary" disabled={!depth||busy} onClick={()=>void exportWorld()}>{busy?<LoaderCircle size={14}/>:<Download size={14}/>} EXPORT COMPLETED WORLD · GLB</button><button type="button" className="stage4-secondary" onClick={downloadManifest}><Download size={14}/> EXPORT SCENEIR + CONFIDENCE JSON</button><button type="button" className="stage4-secondary" onClick={()=>{setVariant('balanced');setShowObserved(true);setShowInferred(true);setStatus('COMPLETION HYPOTHESES RESET')}}><RefreshCw size={14}/> RESET HYPOTHESES</button>
    </aside></div>
   <footer className="stage4-footer"><span><i/> {status}</span><span>STAGE 04 · GENERATIVE COMPLETION BASELINE · NOT A TRAINED 3D FOUNDATION MODEL</span></footer>
  </section>;
