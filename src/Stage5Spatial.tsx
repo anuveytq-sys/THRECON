@@ -32,9 +32,9 @@ function graph(nodes:Node[]):Edge[]{
   const dx=bcx-acx,dy=bcy-acy,overlapX=Math.max(0,Math.min(a.box.x+a.box.w,b.box.x+b.box.w)-Math.max(a.box.x,b.box.x)),overlapY=Math.max(0,Math.min(a.box.y+a.box.h,b.box.y+b.box.h)-Math.max(a.box.y,b.box.y));
   const overlap=overlapX*overlapY/Math.max(.0001,Math.min(a.area,b.area));
   if(overlap>.18){edges.push({from:a.id,to:b.id,relation:'overlaps',strength:overlap});continue;}
-  if(Math.abs(dx)>.07)edges.push({from:a.id,to:b.id,relation:dx<0?'left_of':'right_of',strength:clamp(Math.abs(dx),0,1)});
-  if(Math.abs(dy)>.07)edges.push({from:a.id,to:b.id,relation:dy<0?'above':'below',strength:clamp(Math.abs(dy),0,1)});
-  if(Math.abs(a.depth-b.depth)>.08)edges.push({from:a.id,to:b.id,relation:a.depth>b.depth?'relative_depth_nearer':'relative_depth_farther',strength:Math.abs(a.depth-b.depth)});
+  if(Math.abs(dx)>.07)edges.push({from:a.id,to:b.id,relation:dx<0?'right_of':'left_of',strength:clamp(Math.abs(dx),0,1)});
+  if(Math.abs(dy)>.07)edges.push({from:a.id,to:b.id,relation:dy<0?'below':'above',strength:clamp(Math.abs(dy),0,1)});
+  if(Math.abs(a.depth-b.depth)>.08)edges.push({from:a.id,to:b.id,relation:a.depth>b.depth?'higher_depth_response':'lower_depth_response',strength:Math.abs(a.depth-b.depth)});
  }
  return edges;
 }
