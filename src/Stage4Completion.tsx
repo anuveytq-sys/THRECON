@@ -19,7 +19,7 @@ function candidatesFromMasks(segments:Segment[],depth:DepthMap):Candidate[]{
   const bw=Math.max(1,x1-x0+1),bh=Math.max(1,y1-y0+1),fill=count/Math.max(1,bw*bh/(step*step)),mean=count?sum/count:.5,variance=count?Math.max(0,sum2/count-mean*mean):.25;
   const confidence=clamp(s.score*(.72+.28*clamp(fill,0,1))*(1-clamp(Math.sqrt(variance)*.35,0,.25)),.05,.99);
   const label=s.label.toLowerCase();
-  const kind=/bottle|cup|vase|person|plant|tree/.test(label)?'round':/chair|table|door|book|tv|laptop|cabinet|bed|sofa/.test(label)?'box':'cylinder';
+  const kind:Candidate['kind']=/bottle|cup|vase|person|plant|tree/.test(label)?'round':/chair|table|door|book|tv|laptop|cabinet|bed|sofa/.test(label)?'box':'cylinder';
   return {id,label:s.label,score:s.score,confidence,box:{x:x0/Math.max(1,s.width),y:y0/Math.max(1,s.height),w:bw/Math.max(1,s.width),h:bh/Math.max(1,s.height)},depth:mean,kind};
  }).filter(c=>c.box.w>.018&&c.box.h>.018).sort((a,b)=>b.confidence-a.confidence).slice(0,8);
 }
