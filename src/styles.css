@@ -321,3 +321,80 @@
 .stage5-inspector{display:flex;flex-direction:column;gap:9px;max-height:76vh;overflow-y:auto}.stage5-object-name{padding:10px;border:1px solid #3e9fbd30;border-radius:7px;background:#071522;color:#d6f7ff;font:700 12px var(--display)}.stage5-object-name small{display:block;margin-top:5px;color:#7895aa;font:7px var(--mono)}.stage5-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.stage5-metrics>div{padding:8px;border:1px solid #438eaa35;border-radius:6px;background:#081726}.stage5-metrics small{display:block;color:#789bb0;font:7px var(--mono)}.stage5-metrics b{display:block;margin-top:5px;color:#c8f3ff;font:700 12px var(--display)}.stage5-note,.stage5-relations p{margin:0;color:#819caf;font:8px/1.6 var(--mono)}.stage5-object-actions{display:flex;gap:6px;flex-wrap:wrap}.stage5-relations{display:flex;flex-direction:column;gap:5px;max-height:150px;overflow:auto}.stage5-relations>div{display:flex;flex-direction:column;gap:3px;padding:7px;border:1px solid #3e9fbd26;border-radius:6px;background:#071522}.stage5-relations b{color:#aeeaff;font:8px var(--mono)}.stage5-relations span{color:#789bb0;font:7px var(--mono)}.stage5-object-list{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto}.stage5-object-list button{display:flex;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid #3e9fbd24;border-radius:6px;background:#071522;color:#9fc7d9;text-align:left;font:8px var(--mono);cursor:pointer}.stage5-object-list button.active{border-color:#55dfff;background:#103349;color:#e0faff}.stage5-object-list small{color:#62e3c0}.stage5-command{display:flex;gap:6px}.stage5-command input{flex:1;min-width:0;border:1px solid #3e9fbd55;border-radius:6px;padding:9px;background:#040d18;color:#d9f7ff;font:9px var(--mono)}.stage5-command button{width:38px;border:1px solid #4dc9e8;border-radius:6px;background:#10405a;color:#dffaff}.stage5-command button:disabled{opacity:.4}.stage5-shortcuts{display:flex;gap:5px;flex-wrap:wrap}.stage5-shortcuts button{padding:6px 7px;font-size:7px}.stage5-export{width:100%;min-height:34px;background:#091a2a}.stage5-footer{color:#789bb0;font-size:7px}
 @media(max-width:900px){.stage5-layout{grid-template-columns:minmax(0,1fr) 280px}}
 @media(max-width:700px){.stage5-workspace{padding:8px;overflow-y:auto}.stage5-header{align-items:flex-start;flex-direction:column}.stage5-header strong{font-size:12px}.stage5-layout{display:flex;flex-direction:column;min-height:0}.stage5-graph{min-height:330px;height:38vh;flex:none}.stage5-graph svg{min-height:330px}.stage5-inspector{max-height:none;overflow:visible}.stage5-footer{font-size:6px}}
+
+
+/* Stage 04 / 05 workspace frame: keep every panel inside the app chrome.
+   These workspaces are siblings of the fixed brand, rail and status bar,
+   so they must be anchored below/alongside those controls instead of
+   participating in normal document flow behind the VIRTUAL ITG header. */
+.stage4-workspace,
+.stage5-workspace{
+ position:absolute;
+ z-index:2;
+ left:178px;
+ right:12px;
+ top:77px;
+ bottom:58px;
+ width:auto;
+ height:auto;
+ min-width:0;
+ min-height:0;
+ flex:none;
+ overflow-x:hidden;
+ overflow-y:auto;
+ overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;
+ scrollbar-width:thin;
+ scrollbar-color:#28536b transparent;
+ padding:10px;
+}
+.stage4-workspace::-webkit-scrollbar,
+.stage5-workspace::-webkit-scrollbar{width:6px}
+.stage4-workspace::-webkit-scrollbar-thumb,
+.stage5-workspace::-webkit-scrollbar-thumb{background:#28536b;border-radius:8px}
+.stage4-layout{min-height:0;flex:1;grid-template-columns:minmax(0,1fr) minmax(245px,300px);align-items:stretch}
+.stage4-viewport{min-height:clamp(300px,48vh,520px)}
+.stage4-inspector{max-height:none;min-height:0}
+.stage5-layout{min-height:0;flex:1;grid-template-columns:minmax(0,1fr) minmax(260px,320px);align-items:stretch}
+.stage5-graph{min-height:clamp(300px,46vh,500px)}
+.stage5-graph svg{min-height:clamp(300px,46vh,500px)}
+
+/* Tablet rail collapses to icons; keep Stage 04/05 content aligned with it. */
+@media(max-width:900px){
+ .stage4-workspace,.stage5-workspace{left:64px;right:10px}
+ .stage4-layout{grid-template-columns:minmax(0,1fr) minmax(225px,260px)}
+ .stage5-layout{grid-template-columns:minmax(0,1fr) minmax(230px,280px)}
+}
+
+/* Phone: reserve the same narrow icon rail as Stage 02/03 and make the
+   entire Stage 04/05 page one natural vertical scroll surface. */
+@media(max-width:700px){
+ .stage4-workspace,.stage5-workspace{
+  left:52px;right:7px;top:63px;bottom:53px;
+  padding:7px 5px 12px;gap:8px;
+  overflow-y:auto;overflow-x:hidden;
+ }
+ .stage4-header,.stage5-header{padding:9px;gap:8px}
+ .stage4-header strong,.stage5-header strong{font-size:11px;line-height:1.35;letter-spacing:.08em}
+ .stage4-header span,.stage4-header small,.stage5-header span,.stage5-header small{font-size:7px;letter-spacing:.08em}
+ .stage4-header button,.stage5-header button{min-height:30px;padding:6px 8px;font-size:7px}
+ .stage4-toolbar,.stage5-toolbar{padding:7px 8px;font-size:7px;gap:6px}
+ .stage4-layout,.stage5-layout{display:flex;flex-direction:column;gap:8px;min-height:0;flex:none}
+ .stage4-viewport{height:clamp(250px,42vh,390px);min-height:250px;flex:none}
+ .stage4-inspector,.stage5-inspector{max-height:none;min-height:0;overflow:visible;padding:10px}
+ .stage5-graph{height:clamp(280px,40vh,360px);min-height:280px;flex:none}
+ .stage5-graph svg{height:100%;min-height:280px}
+ .stage5-object-list{max-height:190px}
+ .stage5-relations{max-height:180px}
+ .stage4-footer,.stage5-footer{font-size:6px;padding:7px 8px}
+}
+@media(max-height:560px) and (min-width:701px){
+ .stage4-workspace,.stage5-workspace{top:67px;bottom:50px}
+ .stage4-viewport{min-height:260px}
+ .stage5-graph,.stage5-graph svg{min-height:260px}
+}
+
+.stage4-empty-state{position:absolute;z-index:3;inset:50% 12px auto;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;max-width:460px;margin:auto;padding:14px;border:1px solid #49cbed55;border-radius:10px;background:#061321ed;box-shadow:0 12px 35px #0008;text-align:center;pointer-events:none}
+.stage4-empty-state strong{color:#c9f4ff;font:700 9px var(--mono);letter-spacing:.1em}
+.stage4-empty-state span{color:#8daabd;font:8px/1.6 var(--mono)}
+@media(max-width:700px){.stage4-empty-state{left:8px;right:8px;padding:10px}.stage4-empty-state strong{font-size:8px}}
