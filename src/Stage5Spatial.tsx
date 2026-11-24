@@ -1,5 +1,5 @@
 import {useMemo,useState} from 'react';
-import {ArrowLeft,ArrowRight,Download,GitBranch,Layers3,RotateCcw,Send,Target} from 'lucide-react';
+import {ArrowLeft,Download,GitBranch,Layers3,RotateCcw,Send,Target} from 'lucide-react';
 
 type DepthMap={width:number;height:number;data:Uint8Array};
 type Segment={label:string;score:number;width:number;height:number;data:Uint8Array};
