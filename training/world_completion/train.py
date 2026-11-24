@@ -81,7 +81,7 @@ def main():
     train_size = len(dataset) - validation_size
     train_set, validation_set = random_split(dataset, [train_size, validation_size],
         generator=torch.Generator().manual_seed(17))
-    device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
+    device = "cuda" if torch.cuda.is_available() else ("mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu")
     model = CompletionNet().to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0)
