@@ -85,3 +85,10 @@ python training/world_completion/train.py --data ./synthetic-data --epochs 20 --
 3. Restart the local API. The /health response reports whether the checkpoint exists and is loaded. The /v1/world-completion/infer endpoint accepts multipart fields image, depth and mask, then returns completed-depth and confidence PNGs as base64.
 
 Without the checkpoint, inference returns HTTP 503 with an actionable message. The training baseline is synthetic-data-dependent and must be evaluated on held-out real images before treating its outputs as reliable. It predicts depth completion, not a unique or fully textured hidden 3D object.
+
+
+## Stage 5 — Spatial Intelligence
+
+The optional local API exposes `POST /v1/spatial/relationships`. Submit a JSON object with an `objects` array. Each object requires a unique `id`, semantic `label`, normalized `bbox: [x, y, width, height]`, and may include `depth_response` and `confidence`. The endpoint validates IDs and normalized bounds and returns image-plane relations (left/right, above/below, overlap) plus normalized depth-response ordering. It intentionally does not claim metric 3D positions or infer a calibrated near/far direction.
+
+The browser Stage 5 workspace includes a deterministic local command parser and remains usable without the Python service. Its edits affect the Stage 5 scene-graph proxy representation, not the original photograph or Stage 3 mesh.
