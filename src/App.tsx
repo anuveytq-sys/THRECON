@@ -12,7 +12,6 @@ type Segment={label:string;score:number;width:number;height:number;data:Uint8Arr
 type ScanResult={depth?:{width:number;height:number;data:Uint8Array};segments:Segment[];depthModel:string;segmentationModel:string;runtime:string;elapsedMs:number;warnings:string[]};
 type WorkerMessage={id:number;type:'progress'|'depth'|'segments'|'complete'|'error';message?:string;result?:ScanResult;depth?:ScanResult['depth'];segments?:Segment[];depthModel?:string;runtime?:string;elapsedMs?:number;warnings?:string[]};
 const infernoPalette=(value:number):[number,number,number]=>{
- const stops:[[number,number,number],[number,number,number]][]=[];
  const colors:[[number,number,number],...Array<[number,number,number]>]=[[0,0,4],[31,12,72],[85,15,109],[136,34,106],[186,54,85],[227,89,51],[249,140,10],[249,201,50],[252,255,164]];
  const t=Math.max(0,Math.min(1,value))* (colors.length-1),i=Math.min(colors.length-2,Math.floor(t)),f=t-i;
  return [0,1,2].map(k=>Math.round(colors[i][k]*(1-f)+colors[i+1][k]*f)) as [number,number,number];
