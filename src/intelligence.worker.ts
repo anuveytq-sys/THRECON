@@ -74,8 +74,9 @@ async function inferDepth(image:RawImage,progress:(message:string)=>void):Promis
   if(result.data.length===result.width*result.height)return result;
  }
  const tensor=output?.predicted_depth;
- if(tensor?.data&&tensor.dims?.length>=2){
-  const height=Number(tensor.dims[tensor.dims.length-2]),width=Number(tensor.dims[tensor.dims.length-1]);
+ const dims=tensor?.dims;
+ if(tensor?.data&&dims&&dims.length>=2){
+  const height=Number(dims[dims.length-2]),width=Number(dims[dims.length-1]);
   if(width>0&&height>0&&tensor.data.length===width*height){
    let min=Infinity,max=-Infinity;
    for(const value of tensor.data){const v=Number(value);if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}
