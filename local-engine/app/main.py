@@ -13,6 +13,8 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
+from .world_completion import load_completion_checkpoint
+
 try:
     from transformers import pipeline as hf_pipeline
 except Exception as exc:
@@ -28,12 +30,13 @@ except Exception:
     VGGT = None
     load_and_preprocess_images = None
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 MAX_IMAGES = 8
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 MAX_RETURNED_POINTS = 30000
 MAX_DEPTH_IMAGE_BYTES = 15 * 1024 * 1024
+WORLD_COMPLETION_CHECKPOINT = Path(__file__).resolve().parents[1] / "models" / "world_completion.pt"
 app = FastAPI(title="VIRTUAL ITG Local Spatial API", version=APP_VERSION)
 app.add_middleware(
     CORSMiddleware,
@@ -80,6 +83,11 @@ def load_depth_model():
     return model, device
 
 
+@lru_cache(maxsize=1)
+def load_world_completion_model():
+    return load_completion_checkpoint(WORLD_COMPLETION_CHECKPOINT, choose_device())
+
+
 @app.get("/health")
 def health():
     installed = VGGT is not None
@@ -91,6 +99,8 @@ def health():
         "vggt_model_loaded": load_model.cache_info().currsize > 0,
         "depth_backend_installed": hf_pipeline is not None,
         "depth_model_loaded": load_depth_model.cache_info().currsize > 0,
+        "world_completion_checkpoint": WORLD_COMPLETION_CHECKPOINT.is_file(),
+        "world_completion_model_loaded": load_world_completion_model.cache_info().currsize > 0,
         "depth_backend_error": TRANSFORMERS_IMPORT_ERROR,
         "device": choose_device(),
         "message": (
@@ -115,6 +125,8 @@ def capabilities():
         "gaussian_splat_ply": "browser-stage-3-approximation",
         "multi_view_vggt": VGGT is not None,
         "depth_anything_v2_backend": hf_pipeline is not None,
+        "stage4_world_completion_checkpoint": WORLD_COMPLETION_CHECKPOINT.is_file(),
+        "stage4_world_completion": "trained-model-inference-when-checkpoint-installed; browser-procedural-hypotheses-otherwise",
         "depth_backend_error": TRANSFORMERS_IMPORT_ERROR,
         "depth_model": DEPTH_MODEL,
         "depth_fusion": "VGGT shared world-space point maps when the local model is available",
@@ -184,6 +196,61 @@ async def estimate_depth(image: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Depth estimation failed: {type(exc).__name__}: {exc}") from exc
+
+
+@app.post("/v1/world-completion/infer")
+async def infer_world_completion(
+    image: UploadFile = File(...),
+    depth: UploadFile = File(...),
+    mask: UploadFile = File(...),
+):
+    raw_image, raw_depth, raw_mask = await image.read(), await depth.read(), await mask.read()
+    if not raw_image or not raw_depth or not raw_mask:
+        raise HTTPException(status_code=400, detail="image, depth and mask files are all required.")
+    if max(len(raw_image), len(raw_depth), len(raw_mask)) > MAX_DEPTH_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="An input file exceeds 15 MB.")
+    try:
+        source = Image.open(io.BytesIO(raw_image)).convert("RGB")
+        depth_image = Image.open(io.BytesIO(raw_depth)).convert("L")
+        mask_image = Image.open(io.BytesIO(raw_mask)).convert("L")
+        if depth_image.size != mask_image.size:
+            raise HTTPException(status_code=400, detail="Depth and mask dimensions must match.")
+        original_size = depth_image.size
+        size = 256
+        rgb = np.asarray(source.resize((size, size), Image.Resampling.BILINEAR), dtype=np.float32) / 255.0
+        depth_array = np.asarray(depth_image.resize((size, size), Image.Resampling.BILINEAR), dtype=np.float32) / 255.0
+        mask_array = (np.asarray(mask_image.resize((size, size), Image.Resampling.NEAREST), dtype=np.uint8) > 127).astype(np.float32)
+        inputs = np.concatenate([rgb, depth_array[..., None], mask_array[..., None]], axis=2)
+        tensor = torch.from_numpy(inputs.transpose(2, 0, 1)).unsqueeze(0).to(choose_device())
+        model, metadata = load_world_completion_model()
+        with torch.inference_mode():
+            prediction = model(tensor)[0, 0].detach().float().cpu().numpy()
+        completed = prediction * mask_array + depth_array * (1.0 - mask_array)
+        completed_image = Image.fromarray(np.clip(completed * 255.0, 0, 255).astype(np.uint8)).resize(original_size, Image.Resampling.BILINEAR)
+        confidence = np.where(mask_array > 0, 0.42, 0.98).astype(np.float32)
+        confidence_image = Image.fromarray(np.clip(confidence * 255.0, 0, 255).astype(np.uint8)).resize(original_size, Image.Resampling.NEAREST)
+        output, confidence_output = io.BytesIO(), io.BytesIO()
+        completed_image.save(output, format="PNG", optimize=True)
+        confidence_image.save(confidence_output, format="PNG", optimize=True)
+        return {
+            "model": metadata.get("architecture"),
+            "training_samples": metadata.get("training_samples"),
+            "completed_depth_png_base64": base64.b64encode(output.getvalue()).decode("ascii"),
+            "confidence_png_base64": base64.b64encode(confidence_output.getvalue()).decode("ascii"),
+            "width": original_size[0],
+            "height": original_size[1],
+            "interpretation": "synthetic-data-trained depth completion; masked pixels remain inferred, not observed geometry",
+            "warnings": ["Synthetic training may not generalize to real photographs.", "Depth completion does not uniquely recover hidden object shape."]
+        }
+    except HTTPException:
+        raise
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"World completion failed: {type(exc).__name__}: {exc}") from exc
+
 
 @app.post("/v1/reconstruction/vggt")
 async def reconstruct_vggt(

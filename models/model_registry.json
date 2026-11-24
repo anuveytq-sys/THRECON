@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "modules": {
+    "depth": {
+      "repository": "https://github.com/DepthAnything/Depth-Anything-V2",
+      "model": "onnx-community/depth-anything-v2-small",
+      "status": "browser-integrated"
+    },
+    "segmentation": {
+      "repository": "https://github.com/facebookresearch/detr",
+      "model": "Xenova/detr-resnet-50-panoptic",
+      "status": "browser-integrated"
+    },
+    "multi_view_geometry": {
+      "repository": "https://github.com/facebookresearch/vggt",
+      "model": "facebook/VGGT-1B",
+      "status": "optional-local-backend"
+    },
+    "synthetic_data": {
+      "repository": "https://github.com/blender/blender",
+      "tool": "Blender Python API",
+      "status": "generator-added"
+    },
+    "world_completion": {
+      "model": "virtual-itg-depth-completion-v1",
+      "status": "trainable-local-baseline",
+      "training_script": "training/world_completion/train.py",
+      "checkpoint": "local-engine/models/world_completion.pt"
+    },
+    "object_completion_ui": {
+      "status": "browser-procedural-hypotheses",
+      "evidence_labels": [
+        "observed",
+        "estimated",
+        "inferred"
+      ]
+    }
+  },
+  "notes": [
+    "Model weights are downloaded separately and are not stored in this repository.",
+    "The Stage 4 model is not pretrained. Generate paired Blender scenes and train a checkpoint before calling its local inference endpoint.",
+    "Single-view hidden geometry remains ambiguous and must be labelled as inferred."
+  ]
+}

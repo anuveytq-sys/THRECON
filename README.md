@@ -872,6 +872,10 @@ Suggested order for a solo developer. Timeline depends on available hardware and
 
 **Local engine setup:** See [local-engine/README.md](local-engine/README.md) for the FastAPI endpoint, installation instructions, health check and multi-view reconstruction request format.
 
+### Stage 4 implementation status (current release)
+
+The current Stage 4 browser workspace is documented in [docs/STAGE_04_WORLD_COMPLETION.md](docs/STAGE_04_WORLD_COMPLETION.md). It provides object-mask-based proxy geometry, three alternative inferred-volume hypotheses, confidence/provenance display, and GLB + SceneIR export. A Blender paired-scene generator and PyTorch depth-completion training baseline are included. The optional local API only runs learned completion after a checkpoint has been generated and trained; no pretrained Stage 4 weights are claimed.
+
 ### Phase 4 — Generative World Completion
 
 - Build synthetic training data generator.
