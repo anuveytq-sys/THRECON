@@ -33,7 +33,6 @@ export default function Stage4Completion({photoUrl,photoName,depth,segments,onBa
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});}catch{node.dataset.error='webgl';setStatus('WEBGL UNAVAILABLE');return;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));renderer.setSize(node.clientWidth,node.clientHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor('#050b16',1);node.appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color('#050b16');const camera=new THREE.PerspectiveCamera(48,node.clientWidth/Math.max(1,node.clientHeight),.05,100);camera.position.set(0,1.2,8);
-  const controls=new (THREE as any).OrbitControls;void controls;
   scene.add(new THREE.HemisphereLight('#d4f4ff','#10182c',1.7));const key=new THREE.DirectionalLight('#b5eaff',2.3);key.position.set(4,7,6);scene.add(key);const rim=new THREE.PointLight('#815dff',18,24);rim.position.set(-4,2,-4);scene.add(rim);
   const orbitTarget=new THREE.Vector3(0,0,0);let dragging=false,px=0,py=0,theta=0,phi=1.22,radius=8;
   const updateCamera=()=>{camera.position.set(radius*Math.sin(phi)*Math.sin(theta),radius*Math.cos(phi),radius*Math.sin(phi)*Math.cos(theta));camera.lookAt(orbitTarget);};updateCamera();
