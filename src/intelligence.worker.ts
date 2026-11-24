@@ -102,9 +102,8 @@ async function loadDepthOnWasm(progress:(message:string)=>void,errors:string[]):
  throw new Error('Could not load a Transformers.js-compatible Depth Anything V2 model. '+errors.join(' | '));
 }
 async function runDepth(image:RawImage,blob:Blob,progress:(message:string)=>void):Promise<DepthPayload>{
- const local=await runLocalBackendDepth(blob,progress);
- if(local){runtime='Local Python API';depthModelUsed='depth-anything/Depth-Anything-V2-Small-hf';return local;}
  const isAppleMobile=typeof navigator!=='undefined'&&(/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1));
+ if(!isAppleMobile){const local=await runLocalBackendDepth(blob,progress);if(local){runtime='Local Python API';depthModelUsed='depth-anything/Depth-Anything-V2-Small-hf';return local;}}
  const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
  const errors:string[]=[];
  if(!depthPipeline&&hasGpu){
