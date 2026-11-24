@@ -52,10 +52,12 @@ export default function Stage5Spatial({photoName,depth,segments,onBack}:Props){
   if(/show graph|rebuild graph|refresh graph/.test(q)){setStatus('RELATIONSHIP GRAPH REBUILT');setCommand('');return;}
   if(/undo|revert last/.test(q)){const last=history.at(-1);if(last){setNodes(last.nodes);setSelectedId(last.selectedId);setHistory(h=>h.slice(0,-1));setStatus('LAST SCENE EDIT UNDONE')}else setStatus('NOTHING TO UNDO');setCommand('');return;}
   if(!target){setStatus('SELECT AN OBJECT OR NAME ONE IN YOUR COMMAND');return;}
+  setSelectedId(target.id);
   const index=nodes.findIndex(n=>n.id===target!.id);if(index<0)return;
   const next=nodes.map(n=>({...n,position:[...n.position] as [number,number,number]}));
   const n=next[index],rename=raw.match(/\b(?:rename|call|name)\s+(?:the\s+)?(.+?)\s+(?:to|as)\s+["']?([^"']+)["']?$/i);
   if(rename){n.label=rename[2].trim().slice(0,48);commit(next,'RENAMED '+target.label+' → '+n.label);}
+  else if(/\b(delete|remove)\b/.test(q)){commit(next.filter(x=>x.id!==n.id),'REMOVED '+n.label+' FROM STAGE 05 GRAPH');setSelectedId(null);}
   else if(/\b(hide|make invisible)\b/.test(q)){n.visible=false;commit(next,'HID '+n.label);}
   else if(/\b(show|make visible)\b/.test(q)){n.visible=true;commit(next,'SHOWING '+n.label);}
   else if(/\b(left|right|up|above|down|below|forward|back|backward)\b/.test(q)){
@@ -64,8 +66,8 @@ export default function Stage5Spatial({photoName,depth,segments,onBack}:Props){
    if(/up|above/.test(q)){n.position[1]+=amount;n.box.y=clamp(n.box.y-amount/3,0,1-n.box.h)}if(/down|below/.test(q)){n.position[1]-=amount;n.box.y=clamp(n.box.y+amount/3,0,1-n.box.h)}
    if(/forward/.test(q)){n.position[2]+=amount;n.depth=clamp(n.depth+amount/10,0,1)}if(/back|backward/.test(q)){n.position[2]-=amount;n.depth=clamp(n.depth-amount/10,0,1)}
    commit(next,'MOVED '+n.label+' · '+n.position.map(v=>v.toFixed(2)).join(', '));
-  }else if(/\b(bigger|larger|increase size|scale up)\b/.test(q)){n.box.w=clamp(n.box.w*1.15,.01,1);n.box.h=clamp(n.box.h*1.15,.01,1);commit(next,'SCALED UP '+n.label);}
-  else if(/\b(smaller|reduce size|scale down)\b/.test(q)){n.box.w=clamp(n.box.w*.85,.01,1);n.box.h=clamp(n.box.h*.85,.01,1);commit(next,'SCALED DOWN '+n.label);}
+  }else if(/\b(bigger|larger|increase size|scale up)\b/.test(q)){const cx=n.box.x+n.box.w/2,cy=n.box.y+n.box.h/2;n.box.w=clamp(n.box.w*1.15,.01,1);n.box.h=clamp(n.box.h*1.15,.01,1);n.box.x=clamp(cx-n.box.w/2,0,1-n.box.w);n.box.y=clamp(cy-n.box.h/2,0,1-n.box.h);commit(next,'SCALED UP '+n.label);}
+  else if(/\b(smaller|reduce size|scale down)\b/.test(q)){const cx=n.box.x+n.box.w/2,cy=n.box.y+n.box.h/2;n.box.w=clamp(n.box.w*.85,.01,1);n.box.h=clamp(n.box.h*.85,.01,1);n.box.x=clamp(cx-n.box.w/2,0,1-n.box.w);n.box.y=clamp(cy-n.box.h/2,0,1-n.box.h);commit(next,'SCALED DOWN '+n.label);}
   else if(/\b(reset|restore position)\b/.test(q)){const original=buildNodes(segments,depth).find(x=>x.id===n.id);if(original){n.position=original.position;n.box=original.box;n.visible=true;commit(next,'RESTORED '+n.label)}}
   else {setStatus('COMMAND NOT RECOGNIZED · TRY RENAME, MOVE, HIDE, SHOW, SCALE OR UNDO');}
   setCommand('');
