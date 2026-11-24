@@ -58,7 +58,7 @@ export default function Stage5Spatial({photoName,depth,segments,onBack}:Props){
   else if(/\b(hide|make invisible)\b/.test(q)){n.visible=false;commit(next,'HID '+n.label);}
   else if(/\b(show|make visible)\b/.test(q)){n.visible=true;commit(next,'SHOWING '+n.label);}
   else if(/\b(left|right|up|above|down|below|forward|back|backward)\b/.test(q)){
-   const amount=/\bslightly\b/.test(q)?.12:/\bfar\b|\ba lot\b/.test(q)?.65:.3;
+   const amount=/\\bslightly\\b/.test(q)?0.12:/\\bfar\\b|\\ba lot\\b/.test(q)?0.65:0.3;
    if(/left/.test(q))n.position[0]-=amount;if(/right/.test(q))n.position[0]+=amount;
    if(/up|above/.test(q))n.position[1]+=amount;if(/down|below/.test(q))n.position[1]-=amount;
    if(/forward/.test(q))n.position[2]+=(amount);if(/back|backward/.test(q))n.position[2]-=amount;
