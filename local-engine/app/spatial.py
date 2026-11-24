@@ -56,5 +56,5 @@ def analyze_relationships(objects: list[SpatialObjectInput]) -> list[SpatialRela
         if abs(dd) > 0.08:
             edges.append(SpatialRelationship(source_id=a.id, target_id=b.id,
                 relation="higher_depth_response" if dd > 0 else "lower_depth_response",
-                strength=min(1.0, abs(dd)))
+                strength=min(1.0, abs(dd))))
     return edges
