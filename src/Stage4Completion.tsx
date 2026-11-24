@@ -24,7 +24,7 @@ function candidatesFromMasks(segments:Segment[],depth:DepthMap):Candidate[]{
  }).filter(c=>c.box.w>.018&&c.box.h>.018).sort((a,b)=>b.confidence-a.confidence).slice(0,8);
 }
 export default function Stage4Completion({photoUrl,photoName,depth,segments,onBack}:Props){
- const host=useRef<HTMLDivElement>(null),sceneRef=useRef<THREE.Scene|null>(null),rendererRef=useRef<THREE.WebGLRenderer|null>(null),exportRef=useRef<THREE.Group|null>(null);
+ const host=useRef<HTMLDivElement>(null),sceneRef=useRef<THREE.Scene|null>(null),exportRef=useRef<THREE.Group|null>(null);
  const [variant,setVariant]=useState<Variant>('balanced'),[showObserved,setShowObserved]=useState(true),[showInferred,setShowInferred]=useState(true),[busy,setBusy]=useState(false),[status,setStatus]=useState('READY · WAITING FOR DEPTH + OBJECT MASKS');
  const candidates=useMemo(()=>depth?candidatesFromMasks(segments,depth):[],[segments,depth]);
  const meanConfidence=candidates.length?Math.round(candidates.reduce((a,c)=>a+c.confidence,0)/candidates.length*100):0;
@@ -40,7 +40,7 @@ export default function Stage4Completion({photoUrl,photoName,depth,segments,onBa
   const onMove=(e:PointerEvent)=>{if(!dragging)return;theta-=(e.clientX-px)*.008;phi=clamp(phi+(e.clientY-py)*.008,.25,Math.PI-.25);px=e.clientX;py=e.clientY;updateCamera()};
   const onUp=()=>{dragging=false};const onWheel=(e:WheelEvent)=>{radius=clamp(radius+e.deltaY*.008,3,18);updateCamera()};
   renderer.domElement.addEventListener('pointerdown',onDown);renderer.domElement.addEventListener('pointermove',onMove);renderer.domElement.addEventListener('pointerup',onUp);renderer.domElement.addEventListener('pointercancel',onUp);renderer.domElement.addEventListener('wheel',onWheel,{passive:true});
-  const group=new THREE.Group();scene.add(group);exportRef.current=group;sceneRef.current=scene;rendererRef.current=renderer;
+  const group=new THREE.Group();scene.add(group);exportRef.current=group;sceneRef.current=scene;
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(8,7),new THREE.MeshStandardMaterial({color:'#102337',roughness:.9,metalness:.1,side:THREE.DoubleSide}));floor.rotation.x=-Math.PI/2;floor.position.set(0,-2.15,-.6);group.add(floor);
   const grid=new THREE.GridHelper(8,32,'#28627b','#173149');grid.position.y=-2.13;group.add(grid);
   const roomMat=new THREE.MeshBasicMaterial({color:'#35c9ef',wireframe:true,transparent:true,opacity:.15});
@@ -51,18 +51,18 @@ export default function Stage4Completion({photoUrl,photoName,depth,segments,onBa
     const textureCanvas=document.createElement('canvas');textureCanvas.width=image.naturalWidth;textureCanvas.height=image.naturalHeight;const tc=textureCanvas.getContext('2d');if(!tc)return;tc.drawImage(image,0,0);
     const photoTexture=new THREE.CanvasTexture(textureCanvas);photoTexture.colorSpace=THREE.SRGBColorSpace;
     const imagePlane=new THREE.Mesh(new THREE.PlaneGeometry(4.6,4.6*depth.height/depth.width),new THREE.MeshBasicMaterial({map:photoTexture,transparent:true,opacity:showObserved?1:0,side:THREE.DoubleSide,depthWrite:false}));imagePlane.position.set(0,0,.45);group.add(imagePlane);
-    const thickness=variant==='conservative'?.16:variant==='expanded'?.62:.34;
+    const thickness=variant==='conservative' ? .16 : variant==='expanded' ? .62 : .34;
     candidates.forEach((c)=>{
      const x=(c.box.x+c.box.w/2-.5)*4.6,y=(.5-c.box.y-c.box.h/2)*4.6*depth.height/depth.width;
      const w=Math.max(.12,c.box.w*4.6),h=Math.max(.12,c.box.h*4.6*depth.height/depth.width),z=(.5-c.depth)*1.6;
-     const front=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:'#65dfff',transparent:true,opacity:showObserved?.14:0,side:THREE.DoubleSide,depthWrite:false}));front.position.set(x,y,z+.48);group.add(front);
+     const front=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:'#65dfff',transparent:true,opacity:showObserved ? .14 : 0,side:THREE.DoubleSide,depthWrite:false}));front.position.set(x,y,z+.48);group.add(front);
      let geometry:THREE.BufferGeometry;
      if(c.kind==='round')geometry=new THREE.SphereGeometry(1,24,16);
      else if(c.kind==='cylinder')geometry=new THREE.CylinderGeometry(.5,.5,1,20);
      else geometry=new THREE.BoxGeometry(1,1,1);
-     const back=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:'#6b8cff',emissive:'#162f75',emissiveIntensity:.5,transparent:true,opacity:showInferred?.24:0,roughness:.62,metalness:.12,wireframe:variant==='conservative'}));
-     back.scale.set(w,h,thickness*(variant==='expanded'?1.65:1));back.position.set(x,y,z-thickness*.5);group.add(back);
-     const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),new THREE.LineBasicMaterial({color:'#64eaff',transparent:true,opacity:showInferred?.85:0}));edges.scale.copy(back.scale);edges.position.copy(back.position);group.add(edges);
+     const back=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:'#6b8cff',emissive:'#162f75',emissiveIntensity:.5,transparent:true,opacity:showInferred ? .24 : 0,roughness:.62,metalness:.12,wireframe:variant==='conservative'}));
+     back.scale.set(w,h,thickness*(variant==='expanded' ? 1.65 : 1));back.position.set(x,y,z-thickness*.5);group.add(back);
+     const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),new THREE.LineBasicMaterial({color:'#64eaff',transparent:true,opacity:showInferred ? .85 : 0}));edges.scale.copy(back.scale);edges.position.copy(back.position);group.add(edges);
      const pin=new THREE.Mesh(new THREE.SphereGeometry(.035,8,8),new THREE.MeshBasicMaterial({color:c.confidence>.7?'#48efc0':'#ffc46b'}));pin.position.set(x-w/2,y+h/2,z+.55);group.add(pin);
     });
     setStatus('WORLD COMPLETION BASELINE BUILT · '+candidates.length+' MASKED OBJECT REGIONS · INFERRED VOLUMES LABELLED');
@@ -70,7 +70,7 @@ export default function Stage4Completion({photoUrl,photoName,depth,segments,onBa
   };void makeObjects();
   let frame=0;const animate=()=>{frame=requestAnimationFrame(animate);renderer.render(scene,camera)};animate();
   const resize=()=>{if(!node.clientWidth||!node.clientHeight)return;camera.aspect=node.clientWidth/node.clientHeight;camera.updateProjectionMatrix();renderer.setSize(node.clientWidth,node.clientHeight)};const observer=new ResizeObserver(resize);observer.observe(node);
-  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener('pointerdown',onDown);renderer.domElement.removeEventListener('pointermove',onMove);renderer.domElement.removeEventListener('pointerup',onUp);renderer.domElement.removeEventListener('pointercancel',onUp);renderer.domElement.removeEventListener('wheel',onWheel);scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.LineSegments){o.geometry.dispose();const m=o.material;(Array.isArray(m)?m:[m]).forEach(x=>x.dispose())}});renderer.dispose();renderer.domElement.remove();exportRef.current=null;sceneRef.current=null;rendererRef.current=null;};
+  return()=>{cancelAnimationFrame(frame);observer.disconnect();renderer.domElement.removeEventListener('pointerdown',onDown);renderer.domElement.removeEventListener('pointermove',onMove);renderer.domElement.removeEventListener('pointerup',onUp);renderer.domElement.removeEventListener('pointercancel',onUp);renderer.domElement.removeEventListener('wheel',onWheel);scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.LineSegments){o.geometry.dispose();const m=o.material;(Array.isArray(m)?m:[m]).forEach(x=>x.dispose())}});renderer.dispose();renderer.domElement.remove();exportRef.current=null;sceneRef.current=null;};
  },[photoUrl,depth,candidates,variant,showObserved,showInferred]);
  const exportWorld=async()=>{if(!sceneRef.current||!exportRef.current)return;setBusy(true);setStatus('PACKING OBSERVED + INFERRED GEOMETRY…');try{const result=await new GLTFExporter().parseAsync(sceneRef.current,{binary:true});download(new Blob([result as ArrayBuffer],{type:'model/gltf-binary'}),'virtual-itg-stage4-world-completion.glb');setStatus('STAGE 04 WORLD COMPLETION EXPORTED · GLB');}catch(e){setStatus(e instanceof Error?e.message:'GLB EXPORT FAILED');}finally{setBusy(false)}};
  const downloadManifest=()=>{const manifest={schema:'virtual-itg-world-completion/1',source:photoName,method:'single-view depth + semantic masks + procedural object-shape priors',evidence:{observed:'source photograph and segmentation masks',estimated:'relative depth and object bounds',inferred:'candidate backside volumes and room envelope'},variant,objects:candidates.map(c=>({...c,confidence:Number(c.confidence.toFixed(3)),geometry:'procedural-prior-not-ground-truth'})),warning:'Hidden geometry is ambiguous from one image. These are alternatives, not verified hidden surfaces.'};download(new Blob([JSON.stringify(manifest,null,2)],{type:'application/json'}),'virtual-itg-stage4-scene-ir.json');};
