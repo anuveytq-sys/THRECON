@@ -6,7 +6,7 @@ type SegmentPayload={label:string;score:number;width:number;height:number;data:U
 type DepthPayload={width:number;height:number;data:Uint8Array};
 type WorkerResult={depth?:DepthPayload;segments?:SegmentPayload[];depthModel:string;segmentationModel:string;runtime:string;elapsedMs:number;warnings:string[]};
 type PipelineFunction=(input:RawImage)=>Promise<any>;
-const DEPTH_MODELS=['onnx-community/depth-anything-v2-small','onnx-community/depth-anything-v2-small-ONNX'];
+const DEPTH_MODELS=['onnx-community/depth-anything-v2-small'];
 const SEGMENTATION_MODEL='Xenova/detr-resnet-50-panoptic';
 let depthPipeline:PipelineFunction|null=null;
 let segmentationPipeline:PipelineFunction|null=null;
@@ -67,10 +67,26 @@ async function runLocalBackendDepth(blob:Blob,progress:(message:string)=>void):P
 async function inferDepth(image:RawImage,progress:(message:string)=>void):Promise<DepthPayload>{
  progress('Running Depth Anything V2 per-pixel inference…');
  if(!depthPipeline)throw new Error('Depth pipeline was not initialized.');
- const output=await depthPipeline(image);
- const raw=output?.depth as RawImage|undefined;
- if(!raw?.data||!raw.width||!raw.height)throw new Error('Depth Anything V2 returned an empty depth image.');
- return grayscale(raw);
+ const output=await depthPipeline(image) as {depth?:RawImage;predicted_depth?:{data?:Float32Array|number[];dims?:number[]}};
+ const raw=output?.depth;
+ if(raw?.data&&raw.width>0&&raw.height>0){
+  const result=grayscale(raw);
+  if(result.data.length===result.width*result.height)return result;
+ }
+ const tensor=output?.predicted_depth;
+ if(tensor?.data&&tensor.dims?.length>=2){
+  const height=Number(tensor.dims[tensor.dims.length-2]),width=Number(tensor.dims[tensor.dims.length-1]);
+  if(width>0&&height>0&&tensor.data.length===width*height){
+   let min=Infinity,max=-Infinity;
+   for(const value of tensor.data){const v=Number(value);if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}}
+   if(Number.isFinite(min)&&Number.isFinite(max)){
+    const span=Math.max(1e-6,max-min),data=new Uint8Array(width*height);
+    for(let i=0;i<data.length;i++){const v=Number(tensor.data[i]);data[i]=Number.isFinite(v)?Math.round(Math.max(0,Math.min(1,(v-min)/span))*255):0;}
+    return {width,height,data};
+   }
+  }
+ }
+ throw new Error('Depth Anything V2 returned neither a valid depth image nor a valid predicted-depth tensor.');
 }
 async function loadDepthOnWasm(progress:(message:string)=>void,errors:string[]):Promise<void>{
  for(const model of DEPTH_MODELS){
@@ -88,7 +104,8 @@ async function loadDepthOnWasm(progress:(message:string)=>void,errors:string[]):
 async function runDepth(image:RawImage,blob:Blob,progress:(message:string)=>void):Promise<DepthPayload>{
  const local=await runLocalBackendDepth(blob,progress);
  if(local){runtime='Local Python API';depthModelUsed='depth-anything/Depth-Anything-V2-Small-hf';return local;}
- const hasGpu=typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
+ const isAppleMobile=typeof navigator!=='undefined'&&(/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1));
+ const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
  const errors:string[]=[];
  if(!depthPipeline&&hasGpu){
   try{
@@ -101,22 +118,23 @@ async function runDepth(image:RawImage,blob:Blob,progress:(message:string)=>void
    depthPipeline=null;
   }
  }
- if(!depthPipeline)await loadDepthOnWasm(progress,errors);
+ if(!depthPipeline){progress(isAppleMobile?'Using iPhone-compatible WASM / CPU inference…':'Using WASM / CPU inference…');await loadDepthOnWasm(progress,errors);}
  try{
   progress('Estimating per-pixel relative depth…');
-  return await inferDepth(image,progress);
+  return await Promise.race([inferDepth(image,progress),new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error('Depth inference exceeded 120 seconds. Try a smaller photograph or a device with more available memory.')),120000))]);
  }catch(error){
   if(runtime!=='WebGPU')throw new Error('Depth inference failed on WASM / CPU: '+(error instanceof Error?error.message:String(error)));
   errors.push('WebGPU inference: '+(error instanceof Error?error.message:String(error)));
   depthPipeline=null;runtime='WASM / CPU';
   await loadDepthOnWasm(progress,errors);
   progress('Retrying depth inference on WASM / CPU…');
-  try{return await inferDepth(image,progress);}
+  try{return await Promise.race([inferDepth(image,progress),new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error('WASM depth inference exceeded 120 seconds.')),120000))]);}
   catch(cpuError){throw new Error('Depth inference failed on WebGPU and WASM / CPU. '+errors.join(' | ')+' | CPU inference: '+(cpuError instanceof Error?cpuError.message:String(cpuError)));}
  }
 }
 async function runSegmentation(image:RawImage,progress:(message:string)=>void):Promise<SegmentPayload[]>{
- const hasGpu=typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
+ const isAppleMobile=typeof navigator!=='undefined'&&(/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1));
+ const hasGpu=!isAppleMobile&&typeof navigator!=='undefined'&&Boolean((navigator as unknown as {gpu?:unknown}).gpu);
  if(!segmentationPipeline&&hasGpu){try{progress('Preparing WebGPU segmentation model…');segmentationPipeline=await loadPipeline('image-segmentation',SEGMENTATION_MODEL,progress,'webgpu');}catch{segmentationPipeline=null;}}
  if(!segmentationPipeline){progress('Loading segmentation model on WASM / CPU…');segmentationPipeline=await loadPipeline('image-segmentation',SEGMENTATION_MODEL,progress,'wasm');}
  const convert=(output:Array<{label:string;score:number;mask:RawImage}>)=>output.slice(0,10).map(segment=>({label:segment.label,score:segment.score,width:segment.mask.width,height:segment.mask.height,data:new Uint8Array(segment.mask.data)}));
