@@ -34,11 +34,30 @@
         "estimated",
         "inferred"
       ]
+    },
+    "spatial_relationships": {
+      "implementation": "local-engine/app/spatial.py",
+      "endpoint": "POST /v1/spatial/relationships",
+      "status": "implemented-deterministic-2d-mask-and-depth-response-graph"
+    },
+    "language_intent": {
+      "implementation": "src/Stage5Spatial.tsx",
+      "status": "implemented-browser-local-bounded-command-parser",
+      "supported_commands": [
+        "rename",
+        "move",
+        "hide",
+        "show",
+        "scale",
+        "reset",
+        "undo"
+      ]
     }
   },
   "notes": [
     "Model weights are downloaded separately and are not stored in this repository.",
     "The Stage 4 model is not pretrained. Generate paired Blender scenes and train a checkpoint before calling its local inference endpoint.",
-    "Single-view hidden geometry remains ambiguous and must be labelled as inferred."
+    "Single-view hidden geometry remains ambiguous and must be labelled as inferred.",
+    "Stage 5 graph relationships are inferred from visible image-space masks and relative depth response; they are not calibrated metric 3D ground truth."
   ]
 }
