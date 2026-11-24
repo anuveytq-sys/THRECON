@@ -10,6 +10,8 @@ type Edge={from:string;to:string;relation:string;strength:number};
 type Snapshot={nodes:Node[];selectedId:string|null};
 const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 const uid=(i:number)=>'region-'+String(i+1).padStart(2,'0');
+const sceneStorageKey=(name:string)=>'virtual-itg-stage5:'+name;
+function restoreScene(name:string,fallback:Node[]):Node[]{try{const raw=localStorage.getItem(sceneStorageKey(name));if(!raw)return fallback;const value=JSON.parse(raw);return Array.isArray(value)&&value.every(n=>typeof n.id==='string'&&typeof n.label==='string'&&n.box&&Array.isArray(n.position))?value as Node[]:fallback;}catch{return fallback;}}
 function buildNodes(segments:Segment[],depth:DepthMap|null):Node[]{
  return segments.map((s,i)=>{
   const w=Math.min(s.width,depth?.width??s.width),h=Math.min(s.height,depth?.height??s.height);
@@ -42,7 +44,8 @@ function downloadJson(value:unknown,name:string){const blob=new Blob([JSON.strin
 export default function Stage5Spatial({photoName,depth,segments,onBack}:Props){
  const [nodes,setNodes]=useState<Node[]>(()=>buildNodes(segments,depth));
  const [selectedId,setSelectedId]=useState<string|null>(null),[command,setCommand]=useState(''),[status,setStatus]=useState('SCENE GRAPH READY · LOCAL INTENT ENGINE'),[history,setHistory]=useState<Snapshot[]>([]);
- useEffect(()=>{setNodes(buildNodes(segments,depth));setSelectedId(null);},[segments,depth]);
+ useEffect(()=>{setNodes(restoreScene(photoName,buildNodes(segments,depth)));setSelectedId(null);setHistory([]);},[photoName,segments,depth]);
+ useEffect(()=>{if(!photoName||!nodes.length)return;try{localStorage.setItem(sceneStorageKey(photoName),JSON.stringify(nodes));}catch{setStatus('LOCAL SCENE CACHE FULL · EXPORT SCENEIR TO KEEP EDITS');}},[photoName,nodes]);
  const edges=useMemo(()=>graph(nodes),[nodes]),selected=nodes.find(n=>n.id===selectedId)??null;
  const commit=(next:Node[],message:string)=>{setHistory(h=>[...h.slice(-19),{nodes,selectedId}]);setNodes(next);setStatus(message)};
  const execute=(override?:string)=>{
