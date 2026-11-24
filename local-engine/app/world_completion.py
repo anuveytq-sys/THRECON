@@ -30,7 +30,7 @@ def load_completion_checkpoint(path: Path, device: str):
             f"Stage 4 checkpoint not found at {path}. Generate Blender training scenes "
             "and run training/world_completion/train.py first."
         )
-    payload = torch.load(path, map_location=device, weights_only=False)
+    payload = torch.load(path, map_location=device, weights_only=True)
     if payload.get("architecture") != "virtual-itg-depth-completion-v1":
         raise RuntimeError("Unsupported Stage 4 checkpoint architecture.")
     model = CompletionNet().to(device)
