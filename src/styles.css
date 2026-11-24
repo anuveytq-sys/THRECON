@@ -393,3 +393,8 @@
  .stage4-viewport{min-height:260px}
  .stage5-graph,.stage5-graph svg{min-height:260px}
 }
+
+.stage4-empty-state{position:absolute;z-index:3;inset:50% 12px auto;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;max-width:460px;margin:auto;padding:14px;border:1px solid #49cbed55;border-radius:10px;background:#061321ed;box-shadow:0 12px 35px #0008;text-align:center;pointer-events:none}
+.stage4-empty-state strong{color:#c9f4ff;font:700 9px var(--mono);letter-spacing:.1em}
+.stage4-empty-state span{color:#8daabd;font:8px/1.6 var(--mono)}
+@media(max-width:700px){.stage4-empty-state{left:8px;right:8px;padding:10px}.stage4-empty-state strong{font-size:8px}}
