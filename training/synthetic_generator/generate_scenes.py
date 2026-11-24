@@ -55,7 +55,7 @@ def look_at(obj, target):
     obj.rotation_euler = (Vector(target) - obj.location).to_track_quat("-Z", "Y").to_euler()
 
 
-def configure_passes(scene, folder):
+def configure_passes(scene, folder, stem):
     view_layer = bpy.context.view_layer
     view_layer.use_pass_z = True
     view_layer.use_pass_object_index = True
@@ -63,18 +63,36 @@ def configure_passes(scene, folder):
     tree = scene.node_tree
     tree.nodes.clear()
     render = tree.nodes.new("CompositorNodeRLayers")
-    depth = tree.nodes.new("CompositorNodeOutputFile")
-    depth.base_path = str(folder)
-    depth.file_slots[0].path = "depth_"
-    depth.format.file_format = "OPEN_EXR"
-    depth.format.color_depth = "32"
-    tree.links.new(render.outputs["Depth"], depth.inputs[0])
-    labels = tree.nodes.new("CompositorNodeOutputFile")
-    labels.base_path = str(folder)
-    labels.file_slots[0].path = "object_index_"
-    labels.format.file_format = "OPEN_EXR"
-    labels.format.color_depth = "32"
-    tree.links.new(render.outputs["IndexOB"], labels.inputs[0])
+
+    depth_map = tree.nodes.new("CompositorNodeMapRange")
+    depth_map.inputs["From Min"].default_value = 0.1
+    depth_map.inputs["From Max"].default_value = 20.0
+    depth_map.inputs["To Min"].default_value = 0.0
+    depth_map.inputs["To Max"].default_value = 1.0
+    depth_map.use_clamp = True
+    tree.links.new(render.outputs["Depth"], depth_map.inputs["Value"])
+    depth_out = tree.nodes.new("CompositorNodeOutputFile")
+    depth_out.base_path = str(folder)
+    depth_out.file_slots[0].path = stem + "_depth_"
+    depth_out.format.file_format = "PNG"
+    depth_out.format.color_mode = "BW"
+    depth_out.format.color_depth = "16"
+    tree.links.new(depth_map.outputs["Value"], depth_out.inputs[0])
+
+    index_map = tree.nodes.new("CompositorNodeMapRange")
+    index_map.inputs["From Min"].default_value = 0.0
+    index_map.inputs["From Max"].default_value = 100.0
+    index_map.inputs["To Min"].default_value = 0.0
+    index_map.inputs["To Max"].default_value = 1.0
+    index_map.use_clamp = True
+    tree.links.new(render.outputs["IndexOB"], index_map.inputs["Value"])
+    index_out = tree.nodes.new("CompositorNodeOutputFile")
+    index_out.base_path = str(folder)
+    index_out.file_slots[0].path = stem + "_object_index_"
+    index_out.format.file_format = "PNG"
+    index_out.format.color_mode = "BW"
+    index_out.format.color_depth = "16"
+    tree.links.new(index_map.outputs["Value"], index_out.inputs[0])
 
 
 def render_sample(root, index, rng):
@@ -147,7 +165,7 @@ def render_sample(root, index, rng):
             "seed": rng.randint(0, 2**31 - 1),
             "complete_rgb": "complete_rgb.png",
             "occluded_rgb": "occluded_rgb.png",
-            "depth_and_object_index": "EXR passes emitted by compositor",
+            "complete_depth": "complete_depth_0001.png",\n            "complete_object_index": "complete_object_index_0001.png",\n            "occluded_depth": "occluded_depth_0001.png",\n            "occluded_object_index": "occluded_object_index_0001.png",\n            "occlusion_mask": "occluded_object_index_0001.png where normalized index is 0.99",
             "ground_truth_scene": "ground_truth.blend",
             "object_count": len(objects) - 1,
             "occluder_present": True,
