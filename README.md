@@ -896,6 +896,12 @@ The current Stage 4 browser workspace is documented in [docs/STAGE_04_WORLD_COMP
 
 **Deliverable:** An AI that understands and edits its 3D world.
 
+### Stage 5 implementation status (current release)
+
+The current Stage 5 workspace is documented in [docs/STAGE_05_SPATIAL_INTELLIGENCE.md](docs/STAGE_05_SPATIAL_INTELLIGENCE.md). It adds a semantic object inventory from existing Stage 2 masks, an image-space relationship graph, normalized size/depth-response inspection, a bounded browser-local natural-language command parser, undo, visibility and proxy-transform edits, and SceneIR/relationship JSON export. The local FastAPI service also exposes `POST /v1/spatial/relationships`.
+
+The graph uses visible 2D masks and relative depth responses. It does not claim metric dimensions, full hidden-scene understanding, or direct deformation of the Stage 3 mesh. The local command parser is deterministic and bounded rather than a general-purpose LLM.
+
 ### Phase 6 — Physics and Exploration
 
 - Integrate Rapier.
