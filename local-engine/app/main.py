@@ -12,6 +12,9 @@ import torch
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+from pydantic import BaseModel, Field
+
+from .spatial import SpatialAnalysisRequest, analyze_relationships
 
 from .world_completion import load_completion_checkpoint
 
@@ -30,7 +33,7 @@ except Exception:
     VGGT = None
     load_and_preprocess_images = None
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"
 MAX_IMAGES = 8
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
@@ -126,7 +129,11 @@ def capabilities():
         "multi_view_vggt": VGGT is not None,
         "depth_anything_v2_backend": hf_pipeline is not None,
         "stage4_world_completion_checkpoint": WORLD_COMPLETION_CHECKPOINT.is_file(),
+        "stage5_spatial_relationships": True,
+        "stage5_language_commands": "browser-local-deterministic-intent-parser",
         "stage4_world_completion": "trained-model-inference-when-checkpoint-installed; browser-procedural-hypotheses-otherwise",
+        "stage5_spatial_relationships": "POST /v1/spatial/relationships",
+        "stage5_scene_commands": "browser-local-deterministic-intent-parser; no hosted LLM required",
         "depth_backend_error": TRANSFORMERS_IMPORT_ERROR,
         "depth_model": DEPTH_MODEL,
         "depth_fusion": "VGGT shared world-space point maps when the local model is available",
@@ -196,6 +203,33 @@ async def estimate_depth(image: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Depth estimation failed: {type(exc).__name__}: {exc}") from exc
+
+
+
+@app.post("/v1/spatial/relationships")
+def spatial_relationships(payload: SpatialAnalysisRequest):
+    """Return deterministic image-space relations for semantic objects from Stage 2 masks."""
+    ids = [obj.id for obj in payload.objects]
+    if len(ids) != len(set(ids)):
+        raise HTTPException(status_code=422, detail="Object IDs must be unique.")
+    for obj in payload.objects:
+        x, y, width, height = obj.bbox
+        if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 1.001 or y + height > 1.001:
+            raise HTTPException(status_code=422, detail=f"Object {obj.id} has an invalid normalized bounding box.")
+    relationships = analyze_relationships(payload.objects)
+    return {
+        "schema": "virtual-itg-spatial-graph/1",
+        "node_count": len(payload.objects),
+        "edge_count": len(relationships),
+        "objects": [obj.model_dump() for obj in payload.objects],
+        "relationships": [edge.model_dump() for edge in relationships],
+        "interpretation": "Image-plane relations and normalized depth-response ordering; not metric or full 3D ground truth.",
+        "warnings": [
+            "Semantic labels and bounds originate from the supplied detector/segmentation output.",
+            "Depth response polarity is intentionally not converted into near/far without model-specific calibration.",
+            "Occluded objects and relationships absent from the image cannot be recovered by this endpoint.",
+        ],
+    }
 
 
 @app.post("/v1/world-completion/infer")
