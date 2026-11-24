@@ -1,4 +1,4 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {ArrowLeft,Download,GitBranch,Layers3,RotateCcw,Send,Target} from 'lucide-react';
 
 type DepthMap={width:number;height:number;data:Uint8Array};
@@ -42,6 +42,7 @@ function downloadJson(value:unknown,name:string){const blob=new Blob([JSON.strin
 export default function Stage5Spatial({photoName,depth,segments,onBack}:Props){
  const [nodes,setNodes]=useState<Node[]>(()=>buildNodes(segments,depth));
  const [selectedId,setSelectedId]=useState<string|null>(null),[command,setCommand]=useState(''),[status,setStatus]=useState('SCENE GRAPH READY · LOCAL INTENT ENGINE'),[history,setHistory]=useState<Snapshot[]>([]);
+ useEffect(()=>{setNodes(buildNodes(segments,depth));setSelectedId(null);},[segments,depth]);
  const edges=useMemo(()=>graph(nodes),[nodes]),selected=nodes.find(n=>n.id===selectedId)??null;
  const commit=(next:Node[],message:string)=>{setHistory(h=>[...h.slice(-19),{nodes,selectedId}]);setNodes(next);setStatus(message)};
  const execute=()=>{
