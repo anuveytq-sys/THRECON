@@ -98,12 +98,12 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
      const labelTexture=new THREE.CanvasTexture(labelCanvas);const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture,transparent:true}));tag.scale.set(Math.max(1.3,w*1.6),.28,1);tag.position.y=h/2+.28;group.add(tag);
      group.position.set(x,y,z);scene.add(group);objects.push({id,label,body,group,size:new THREE.Vector3(w,h,d),confidence});
     };
-    if(photoImage&&segments.length){const usable=segments.slice(0,18);usable.forEach((seg,i)=>{
+    if(photoImage&&segments.length){const sourceImage=photoImage;const usable=segments.slice(0,18);usable.forEach((seg,i)=>{
       let x0=seg.width,y0=seg.height,x1=0,y1=0,count=0;const step=Math.max(1,Math.floor(Math.sqrt(seg.width*seg.height/12000)));
       for(let y=0;y<seg.height;y+=step)for(let x=0;x<seg.width;x+=step)if((seg.data[y*seg.width+x]??0)>96){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);count++}
       if(!count)return;const bw=Math.max(.45,((x1-x0)/seg.width)*8),bh=Math.max(.55,((y1-y0)/seg.height)*5.4),cx=(x0+x1)/2/seg.width,cy=(y0+y1)/2/seg.height;
       const crop=document.createElement('canvas');crop.width=Math.max(2,x1-x0+1);crop.height=Math.max(2,y1-y0+1);const c=crop.getContext('2d');if(!c)return;
-      c.drawImage(photoImage,x0/seg.width*photoImage.width,y0/seg.height*photoImage.height,crop.width/seg.width*photoImage.width,crop.height/seg.height*photoImage.height,0,0,crop.width,crop.height);
+      c.drawImage(sourceImage,x0/seg.width*sourceImage.width,y0/seg.height*sourceImage.height,crop.width/seg.width*sourceImage.width,crop.height/seg.height*sourceImage.height,0,0,crop.width,crop.height);
       const pixels=c.getImageData(0,0,crop.width,crop.height),maskX=Math.max(1,Math.floor(x0)),maskY=Math.max(1,Math.floor(y0));
       for(let py=0;py<crop.height;py++)for(let px=0;px<crop.width;px++){const sx=Math.min(seg.width-1,maskX+Math.floor(px/Math.max(1,crop.width)*Math.max(1,x1-x0))),sy=Math.min(seg.height-1,maskY+Math.floor(py/Math.max(1,crop.height)*Math.max(1,y1-y0)));pixels.data[(py*crop.width+px)*4+3]=seg.data[sy*seg.width+sx]??0}
       c.putImageData(pixels,0,0);const tex=new THREE.CanvasTexture(crop);tex.colorSpace=THREE.SRGBColorSpace;tex.needsUpdate=true;
