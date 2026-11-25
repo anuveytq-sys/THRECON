@@ -14,7 +14,7 @@ const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Props){
  const host=useRef<HTMLDivElement>(null);
  const input=useRef({forward:false,back:false,left:false,right:false,jump:false,run:false});
- const gameApi=useRef<{renderer:THREE.WebGLRenderer;scene:THREE.Scene;camera:THREE.PerspectiveCamera;world:InstanceType<typeof RAPIER.World>;character:InstanceType<typeof RAPIER.RigidBody>;characterCollider:InstanceType<typeof RAPIER.Collider>;controller:InstanceType<typeof RAPIER.KinematicCharacterController>;objects:GameObject[];cleanup:()=>void}|null>(null);
+ const gameApi=useRef<{camera:THREE.PerspectiveCamera;objects:GameObject[];cleanup:()=>void}|null>(null);
  const [status,setStatus]=useState('INITIALIZING WORLD SYSTEMS');
  const [ready,setReady]=useState(false);
  const [forceRotate,setForceRotate]=useState(false);
@@ -28,6 +28,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
 
  const enterLandscape=useCallback(async()=>{
   const el=host.current;
+  setForceRotate(window.matchMedia('(orientation: portrait)').matches);
   try{if(el?.requestFullscreen&&!document.fullscreenElement)await el.requestFullscreen()}catch{}
   try{const orientation=screen.orientation as ScreenOrientation&{lock?:(v:'landscape')=>Promise<void>};await orientation.lock?.('landscape')}catch{}
   setForceRotate(window.matchMedia('(orientation: portrait)').matches);
@@ -141,7 +142,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
   void start();
   const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(node);window.addEventListener('resize',resize);
   const cleanup=()=>{disposed=true;cancelAnimationFrame(animationId);resizeObserver.disconnect();window.removeEventListener('resize',resize);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);canvas.removeEventListener('pointerdown',onPointerDown);canvas.removeEventListener('pointermove',onPointerMove);canvas.removeEventListener('pointerup',onPointerUp);canvas.removeEventListener('pointercancel',onPointerUp);renderer?.setAnimationLoop(null);renderer?.dispose();world?.free();scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(x=>x.dispose());else m.dispose()}});if(canvas.parentElement===node)node.removeChild(canvas)};
-  gameApi.current={renderer,scene,camera,world:world as InstanceType<typeof RAPIER.World>,character:character as InstanceType<typeof RAPIER.RigidBody>,characterCollider:characterCollider as InstanceType<typeof RAPIER.Collider>,controller:controller as InstanceType<typeof RAPIER.KinematicCharacterController>,objects,cleanup};
+  gameApi.current={camera,objects,cleanup};
   return cleanup;
  },[photoUrl,depth,segments,exitGame]);
 
@@ -154,7 +155,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
 
  return <div ref={host} className={'stage6-game '+(forceRotate?'stage6-force-landscape':'')}>
   {!gameStarted&&<div className="stage6-start"><div><span>STAGE 06 · WORLD SIMULATOR</span><h1>ENTER YOUR PHOTO WORLD</h1><p>Explore the reconstructed depth field, move around detected object proxies, and pick them up. Hidden geometry remains clearly marked as estimated.</p><button type="button" onClick={()=>{void enterLandscape();setGameStarted(true)}}><Maximize2 size={15}/> ENTER GAME · LANDSCAPE</button><small>Browsers without orientation locking use a rotated landscape game view. EXIT WORLD returns to the studio.</small></div></div>}
-  {gameStarted&&<div className="stage6-hud stage6-top"><div className="stage6-brand"><span className="stage6-live"/> VIRTUAL ITG <b>WORLD SIMULATOR</b><small>{photoName||'PHOTO WORLD'}</small></div><div className="stage6-top-actions"><span>{objectCount} OBJECTS · RAPIER 3D</span><button type="button" onClick={()=>setPaused(v=>{pausedRef.current=!v;return !v})}>{paused?'RESUME':'PAUSE'}</button><button type="button" onClick={exitGame}><ArrowLeft size={14}/> EXIT WORLD</button></div></div>
+  {gameStarted&&<div className="stage6-hud stage6-top"><div className="stage6-brand"><span className="stage6-live"/> VIRTUAL ITG <b>WORLD SIMULATOR</b><small>{photoName||'PHOTO WORLD'}</small></div><div className="stage6-top-actions"><span>{objectCount} OBJECTS · RAPIER 3D</span><button type="button" onClick={()=>{const next=!pausedRef.current;pausedRef.current=next;setPaused(next)}}>{paused?'RESUME':'PAUSE'}</button><button type="button" onClick={exitGame}><ArrowLeft size={14}/> EXIT WORLD</button></div></div>
   {gameStarted&&<div className="stage6-reticle"><i/></div>}
   {gameStarted&&<div className="stage6-hud stage6-left-info"><b>{status}</b><small>WASD / ARROWS · DRAG TO LOOK · SPACE TO JUMP</small>{heldName&&<span><Hand size={12}/> HOLDING: {heldName}</span>}</div>
   {error&&<div className="stage6-error">{error}</div>}
