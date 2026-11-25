@@ -58,6 +58,21 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
   const keyLight=new THREE.DirectionalLight(0xd8f4ff,3.2);keyLight.position.set(-6,12,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);scene.add(keyLight);
   const rim=new THREE.PointLight(0x20cfff,28,35);rim.position.set(7,5,-4);scene.add(rim);
   const violet=new THREE.PointLight(0x8a65ff,20,28);violet.position.set(-8,3,-8);scene.add(violet);
+  const avatar=new THREE.Group();
+  const suit=new THREE.MeshStandardMaterial({color:0x123b55,metalness:.72,roughness:.26,emissive:0x0a6e9a,emissiveIntensity:.55});
+  const armor=new THREE.MeshStandardMaterial({color:0x26345f,metalness:.78,roughness:.22,emissive:0x4529a0,emissiveIntensity:.45});
+  const glow=new THREE.MeshStandardMaterial({color:0x9af5ff,emissive:0x31dfff,emissiveIntensity:2.4,metalness:.25,roughness:.18});
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.25,.48,5,10),suit);torso.castShadow=true;avatar.add(torso);
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(.34,.28,.13),armor);chest.position.set(0,.08,-.22);chest.castShadow=true;avatar.add(chest);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12),armor);head.position.y=.62;head.castShadow=true;avatar.add(head);
+  const visor=new THREE.Mesh(new THREE.BoxGeometry(.27,.075,.045),glow);visor.position.set(0,.65,-.2);avatar.add(visor);
+  for(const side of [-1,1]){
+   const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.38,4,8),suit);arm.position.set(side*.36,.02,0);arm.rotation.z=side*-.16;arm.castShadow=true;avatar.add(arm);
+   const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.095,.38,4,8),armor);leg.position.set(side*.14,-.48,0);leg.castShadow=true;avatar.add(leg);
+   const boot=new THREE.Mesh(new THREE.BoxGeometry(.18,.13,.29),suit);boot.position.set(side*.14,-.78,-.06);boot.castShadow=true;avatar.add(boot);
+  }
+  const avatarRing=new THREE.Mesh(new THREE.TorusGeometry(.4,.025,8,32),new THREE.MeshBasicMaterial({color:0x39dfff,transparent:true,opacity:.65}));avatarRing.rotation.x=Math.PI/2;avatarRing.position.y=-.88;avatar.add(avatarRing);
+  avatar.position.set(0,1.25,6);scene.add(avatar);
   const groundMat=new THREE.MeshStandardMaterial({color:0x101d2b,metalness:.55,roughness:.42});
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(52,52),groundMat);ground.rotation.x=-Math.PI/2;ground.position.y=-.12;ground.receiveShadow=true;scene.add(ground);
   const grid=new THREE.GridHelper(52,52,0x35cfff,0x18364d);grid.position.y=-.105;scene.add(grid);
@@ -134,7 +149,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
      accumulator-=step;
     }
     objects.forEach(o=>{const p=o.body.translation(),r=o.body.rotation();o.group.position.set(p.x,p.y,p.z);o.group.quaternion.set(r.x,r.y,r.z,r.w)});
-    const cp=character.translation(),look=new THREE.Vector3(-Math.sin(yaw),Math.sin(pitch),-Math.cos(yaw));camera.position.lerp(new THREE.Vector3(cp.x+Math.sin(yaw)*3.8,cp.y+2.25,cp.z+Math.cos(yaw)*3.8),.16);camera.lookAt(new THREE.Vector3(cp.x,cp.y+1.15,cp.z).add(look.multiplyScalar(2.5)));
+    const cp=character.translation();avatar.position.set(cp.x,cp.y,cp.z);avatar.rotation.y=yaw;const look=new THREE.Vector3(-Math.sin(yaw),Math.sin(pitch),-Math.cos(yaw));camera.position.lerp(new THREE.Vector3(cp.x+Math.sin(yaw)*3.8,cp.y+2.25,cp.z+Math.cos(yaw)*3.8),.16);camera.lookAt(new THREE.Vector3(cp.x,cp.y+1.15,cp.z).add(look.multiplyScalar(2.5)));
    }
    renderer.render(scene,camera);
   };
