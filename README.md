@@ -904,14 +904,17 @@ The graph uses visible 2D masks and relative depth responses. It does not claim 
 
 ### Phase 6 — Physics and Exploration
 
-- Integrate Rapier.
-- Build the third-person character.
-- Generate colliders.
-- Add object interaction.
-- Implement gravity and collisions.
-- Add scene navigation.
+**Implemented browser baseline:** [Stage 6 documentation](docs/STAGE_06_PHYSICS_AND_EXPLORATION.md)
 
-**Deliverable:** Fully explorable and interactive worlds.
+- Rapier 3D rigid-body physics and gravity.
+- Third-person character with collision-aware movement, jump, run and camera look.
+- Collider-backed interactive object proxies generated from Stage 2 segmentation masks.
+- Reticle-based PICK UP / DROP interaction with dynamic bodies.
+- Photo-textured, relative-depth-displaced environment surface and a playable sci-fi exploration space.
+- Desktop keyboard controls and touch controls.
+- Fullscreen + landscape-orientation request, with a CSS rotated-view fallback where browser orientation locking is unavailable.
+
+**Deliverable:** A locally playable photo-derived world with explicitly labelled inferred geometry. It is not yet a complete metric reconstruction; multiple saved scans are not yet fused into one continuous map, and real-device browser testing remains required.
 
 ### Phase 7 — Model Training and Optimization
 
