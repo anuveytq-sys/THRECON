@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
-import {ArrowLeft,Box,Hand,Info,Maximize2,Move,RotateCcw,Smartphone,Volume2} from 'lucide-react';
+import {ArrowLeft,Box,Hand,Info,Maximize2,Move,RotateCcw} from 'lucide-react';
 
 type DepthMap={width:number;height:number;data:Uint8Array};
 type Segment={label:string;score:number;width:number;height:number;data:Uint8Array};
@@ -22,6 +22,9 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
  const [objectCount,setObjectCount]=useState(0);
  const [error,setError]=useState('');
  const [paused,setPaused]=useState(false);
+ const pausedRef=useRef(false);
+ const heldRef=useRef<GameObject|null>(null);
+ const [gameStarted,setGameStarted]=useState(false);
 
  const enterLandscape=useCallback(async()=>{
   const el=host.current;
@@ -45,7 +48,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
   window.addEventListener('keydown',down);window.addEventListener('keyup',up);
   let pointerId:number|null=null,lastX=0,lastY=0,yaw=0,pitch=-0.12,verticalSpeed=0,grounded=false,accumulator=0;
   let world:InstanceType<typeof RAPIER.World>|null=null,character:InstanceType<typeof RAPIER.RigidBody>|null=null,characterCollider:InstanceType<typeof RAPIER.Collider>|null=null,controller:InstanceType<typeof RAPIER.KinematicCharacterController>|null=null;
-  const objects:GameObject[]=[];let held:GameObject|null=null;
+  const objects:GameObject[]=[];
   const scene=new THREE.Scene();scene.background=new THREE.Color('#07111f');scene.fog=new THREE.FogExp2('#07111f',.018);
   const camera=new THREE.PerspectiveCamera(66,1,.08,180);camera.position.set(0,3,8);
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;node.appendChild(renderer.domElement)}catch(e){setError('This browser could not create a WebGL game surface.');setStatus('GRAPHICS INITIALIZATION FAILED');return}
@@ -110,18 +113,6 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
     setObjectCount(objects.length);setStatus('RAPIER PHYSICS ONLINE · '+objects.length+' INTERACTIVE OBJECTS');setReady(true);
    }catch(e){setError('Physics engine could not initialize: '+(e instanceof Error?e.message:'unknown error'));setStatus('PHYSICS INITIALIZATION FAILED')}
   };
-  const pickNearest=()=>{
-   if(!world||!camera)return;
-   if(held){held.body.setBodyType(RAPIER.RigidBodyType.Dynamic,true);held.body.setLinvel({x:0,y:0,z:-1.2},true);held=null;setHeldName('');setStatus('OBJECT RELEASED · GRAVITY ACTIVE');return}
-   const raycaster=new THREE.Raycaster();raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
-   const hits=raycaster.intersectObjects(objects.flatMap(o=>o.group.children),true);
-   const hit=hits.find(h=>h.distance<4.2);if(!hit){setStatus('NO OBJECT IN REACH · LOOK AT A DETECTED OBJECT');return}
-   let group:THREE.Object3D|null=hit.object;while(group&&!(group.userData.objectId))group=group.parent;
-   const found=objects.find(o=>hit.object===o.group||o.group===group||o.group.children.includes(hit.object));
-   const object=found??objects.find(o=>{let p:THREE.Object3D|null=hit.object;while(p&&p!==o.group)p=p.parent;return p===o.group});
-   if(!object){setStatus('TARGET NOT INTERACTIVE');return}
-   held=object;held.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased,true);setHeldName(object.label);setStatus('PICKED UP · '+object.label.toUpperCase());
-  };
   const resize=()=>{const w=Math.max(1,node.clientWidth),h=Math.max(1,node.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();renderer!.setSize(w,h,false)};
   const onPointerDown=(e:PointerEvent)=>{pointerId=e.pointerId;lastX=e.clientX;lastY=e.clientY;try{canvas.setPointerCapture(e.pointerId)}catch{}};
   const onPointerMove=(e:PointerEvent)=>{if(pointerId!==e.pointerId)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;yaw-=dx*.004;pitch=clamp(pitch-dy*.003,-.78,.55)};
@@ -130,7 +121,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
   const animate=(time:number)=>{
    if(disposed||!renderer)return;animationId=requestAnimationFrame(animate);
    const dt=Math.min(.04,Math.max(0,(time-(animate as unknown as {last?:number}).last!)/1000||1/60));(animate as unknown as {last:number}).last=time;
-   if(world&&character&&characterCollider&&controller&&!paused){
+   if(world&&character&&characterCollider&&controller&&!pausedRef.current){
     accumulator+=dt;const step=1/60;
     while(accumulator>=step){
      world.timestep=step;world.step();
@@ -138,7 +129,7 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
      const move=new THREE.Vector3();if(keys.forward)move.add(forward);if(keys.back)move.sub(forward);if(keys.right)move.add(right);if(keys.left)move.sub(right);if(move.lengthSq()>0)move.normalize().multiplyScalar(keys.run?5.8:3.7);
      if(keys.jump&&grounded){verticalSpeed=5.2;grounded=false}verticalSpeed=Math.max(-18,verticalSpeed-9.81*step);
      const desired={x:move.x*step,y:verticalSpeed*step,z:move.z*step};controller.computeColliderMovement(characterCollider,desired);const actual=controller.computedMovement();character.setNextKinematicTranslation({x:pos.x+actual.x,y:pos.y+actual.y,z:pos.z+actual.z});grounded=controller.computedGrounded();if(grounded&&verticalSpeed<0)verticalSpeed=0;
-     if(held){const target=camera.position.clone().add(new THREE.Vector3(-Math.sin(yaw),Math.sin(pitch),-Math.cos(yaw)).multiplyScalar(1.65));held.body.setTranslation({x:target.x,y:target.y,z:target.z},true);held.body.setLinvel({x:0,y:0,z:0},true)}
+     if(heldRef.current){const target=camera.position.clone().add(new THREE.Vector3(-Math.sin(yaw),Math.sin(pitch),-Math.cos(yaw)).multiplyScalar(1.65));heldRef.current.body.setTranslation({x:target.x,y:target.y,z:target.z},true);heldRef.current.body.setLinvel({x:0,y:0,z:0},true)}
      accumulator-=step;
     }
     objects.forEach(o=>{const p=o.body.translation(),r=o.body.rotation();o.group.position.set(p.x,p.y,p.z);o.group.quaternion.set(r.x,r.y,r.z,r.w)});
@@ -146,32 +137,33 @@ export default function Stage6Game({photoUrl,photoName,depth,segments,onExit}:Pr
    }
    renderer.render(scene,camera);
   };
-  const start=async()=>{setStatus('LOADING RAPIER WASM PHYSICS + DEPTH WORLD');await addPhotoWorld();if(disposed)return;await addPhysics();if(disposed)return;resize();renderer!.setAnimationLoop(()=>{});animationId=requestAnimationFrame(animate)};
+  const start=async()=>{setStatus('LOADING RAPIER WASM PHYSICS + DEPTH WORLD');await addPhotoWorld();if(disposed)return;await addPhysics();if(disposed)return;resize();animationId=requestAnimationFrame(animate)};
   void start();
   const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(node);window.addEventListener('resize',resize);
   const cleanup=()=>{disposed=true;cancelAnimationFrame(animationId);resizeObserver.disconnect();window.removeEventListener('resize',resize);window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);canvas.removeEventListener('pointerdown',onPointerDown);canvas.removeEventListener('pointermove',onPointerMove);canvas.removeEventListener('pointerup',onPointerUp);canvas.removeEventListener('pointercancel',onPointerUp);renderer?.setAnimationLoop(null);renderer?.dispose();world?.free();scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const m=o.material;if(Array.isArray(m))m.forEach(x=>x.dispose());else m.dispose()}});if(canvas.parentElement===node)node.removeChild(canvas)};
-  gameApi.current={renderer,scene,camera,world:world as InstanceType<typeof RAPIER.World>,character:character as InstanceType<typeof RAPIER.RigidBody>,characterCollider:characterCollider as InstanceType<typeof RAPIER.Collider>,controller:controller as InstanceType<typeof RAPIER.KinematicCharacterController>,objects,held,cleanup};
+  gameApi.current={renderer,scene,camera,world:world as InstanceType<typeof RAPIER.World>,character:character as InstanceType<typeof RAPIER.RigidBody>,characterCollider:characterCollider as InstanceType<typeof RAPIER.Collider>,controller:controller as InstanceType<typeof RAPIER.KinematicCharacterController>,objects,cleanup};
   return cleanup;
  },[photoUrl,depth,segments,paused,exitGame]);
 
  const moveButton=(key:MoveKey,value:boolean)=>{input.current[key]=value};
  const jump=()=>{input.current.jump=true;window.setTimeout(()=>{input.current.jump=false},180)};
- const pickup=()=>{const api=gameApi.current;if(!api)return;const held=api.held;if(held){held.body.setBodyType(RAPIER.RigidBodyType.Dynamic,true);held.body.setLinvel({x:0,y:0,z:-1.2},true);api.held=null;setHeldName('');setStatus('OBJECT RELEASED · GRAVITY ACTIVE');return}const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(0,0),api.camera);const hits=ray.intersectObjects(api.objects.flatMap(o=>o.group.children),true);const hit=hits.find(h=>h.distance<4.2);if(!hit){setStatus('AIM AT AN OBJECT WITHIN REACH');return}let object:GameObject|undefined;for(const candidate of api.objects){let p:THREE.Object3D|null=hit.object;while(p&&p!==candidate.group)p=p.parent;if(p===candidate.group){object=candidate;break}}if(!object){setStatus('OBJECT NOT AVAILABLE');return}api.held=object;object.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased,true);setHeldName(object.label);setStatus('PICKED UP · '+object.label.toUpperCase())};
+ const pickup=()=>{const api=gameApi.current;if(!api)return;const held=api.held;if(heldRef.current){heldRef.current.body.setBodyType(RAPIER.RigidBodyType.Dynamic,true);heldRef.current.body.setLinvel({x:0,y:0,z:-1.2},true);heldRef.current=null;setHeldName('');setStatus('OBJECT RELEASED · GRAVITY ACTIVE');return}const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(0,0),api.camera);const hits=ray.intersectObjects(api.objects.flatMap(o=>o.group.children),true);const hit=hits.find(h=>h.distance<4.2);if(!hit){setStatus('AIM AT AN OBJECT WITHIN REACH');return}let object:GameObject|undefined;for(const candidate of api.objects){let p:THREE.Object3D|null=hit.object;while(p&&p!==candidate.group)p=p.parent;if(p===candidate.group){object=candidate;break}}if(!object){setStatus('OBJECT NOT AVAILABLE');return}heldRef.current=object;object.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased,true);setHeldName(object.label);setStatus('PICKED UP · '+object.label.toUpperCase())};
 
  useEffect(()=>{const onChange=()=>setForceRotate(window.matchMedia('(orientation: portrait)').matches);window.addEventListener('orientationchange',onChange);window.addEventListener('resize',onChange);return()=>{window.removeEventListener('orientationchange',onChange);window.removeEventListener('resize',onChange)}},[]);
- useEffect(()=>()=>{gameApi.current?.cleanup();void leaveLandscape()},[leaveLandscape]);
+ useEffect(()=>()=>{gameApi.current?.cleanup();heldRef.current=null;void leaveLandscape()},[leaveLandscape]);
 
  return <div ref={host} className={'stage6-game '+(forceRotate?'stage6-force-landscape':'')}>
-  <div className="stage6-hud stage6-top"><div className="stage6-brand"><span className="stage6-live"/> VIRTUAL ITG <b>WORLD SIMULATOR</b><small>{photoName||'PHOTO WORLD'}</small></div><div className="stage6-top-actions"><span>{objectCount} OBJECTS · RAPIER 3D</span><button type="button" onClick={()=>setPaused(v=>!v)}>{paused?'RESUME':'PAUSE'}</button><button type="button" onClick={exitGame}><ArrowLeft size={14}/> EXIT WORLD</button></div></div>
-  <div className="stage6-reticle"><i/></div>
-  <div className="stage6-hud stage6-left-info"><b>{status}</b><small>WASD / ARROWS · DRAG TO LOOK · SPACE TO JUMP</small>{heldName&&<span><Hand size={12}/> HOLDING: {heldName}</span>}</div>
+  {!gameStarted&&<div className="stage6-start"><div><span>STAGE 06 · WORLD SIMULATOR</span><h1>ENTER YOUR PHOTO WORLD</h1><p>Explore the reconstructed depth field, move around detected object proxies, and pick them up. Hidden geometry remains clearly marked as estimated.</p><button type="button" onClick={()=>{void enterLandscape();setGameStarted(true)}}><Maximize2 size={15}/> ENTER GAME · LANDSCAPE</button><small>Browsers without orientation locking use a rotated landscape game view. EXIT WORLD returns to the studio.</small></div></div>}
+  {gameStarted&&<div className="stage6-hud stage6-top"><div className="stage6-brand"><span className="stage6-live"/> VIRTUAL ITG <b>WORLD SIMULATOR</b><small>{photoName||'PHOTO WORLD'}</small></div><div className="stage6-top-actions"><span>{objectCount} OBJECTS · RAPIER 3D</span><button type="button" onClick={()=>setPaused(v=>{pausedRef.current=!v;return !v})}>{paused?'RESUME':'PAUSE'}</button><button type="button" onClick={exitGame}><ArrowLeft size={14}/> EXIT WORLD</button></div></div>
+  {gameStarted&&<div className="stage6-reticle"><i/></div>}
+  {gameStarted&&<div className="stage6-hud stage6-left-info"><b>{status}</b><small>WASD / ARROWS · DRAG TO LOOK · SPACE TO JUMP</small>{heldName&&<span><Hand size={12}/> HOLDING: {heldName}</span>}</div>
   {error&&<div className="stage6-error">{error}</div>}
-  <div className="stage6-touch stage6-movement">
+  {gameStarted&&<div className="stage6-touch stage6-movement">
    <div className="stage6-dpad"><button type="button" aria-label="Move forward" onPointerDown={e=>{e.preventDefault();moveButton('forward',true)}} onPointerUp={()=>moveButton('forward',false)} onPointerLeave={()=>moveButton('forward',false)}>▲</button><div><button type="button" aria-label="Move left" onPointerDown={e=>{e.preventDefault();moveButton('left',true)}} onPointerUp={()=>moveButton('left',false)} onPointerLeave={()=>moveButton('left',false)}>◀</button><button type="button" aria-label="Move backward" onPointerDown={e=>{e.preventDefault();moveButton('back',true)}} onPointerUp={()=>moveButton('back',false)} onPointerLeave={()=>moveButton('back',false)}>▼</button><button type="button" aria-label="Move right" onPointerDown={e=>{e.preventDefault();moveButton('right',true)}} onPointerUp={()=>moveButton('right',false)} onPointerLeave={()=>moveButton('right',false)}>▶</button></div></div>
   </div>
-  <div className="stage6-touch stage6-actions"><button type="button" className="stage6-jump" onClick={jump}>JUMP</button><button type="button" className="stage6-pickup" onClick={pickup}><Hand size={17}/>{heldName?'DROP':'PICK UP'}</button><button type="button" className="stage6-run" onPointerDown={()=>{input.current.run=true}} onPointerUp={()=>{input.current.run=false}} onPointerLeave={()=>{input.current.run=false}}>RUN</button></div>
-  <div className="stage6-hud stage6-bottom"><span><Move size={12}/> MOVE</span><span><RotateCcw size={12}/> DRAG TO LOOK</span><span><Box size={12}/> {objectCount} PHYSICS PROXIES</span><span><Info size={12}/> INFERRED PARTS ARE APPROXIMATIONS</span></div>
+  {gameStarted&&<div className="stage6-touch stage6-actions"><button type="button" className="stage6-jump" onClick={jump}>JUMP</button><button type="button" className="stage6-pickup" onClick={pickup}><Hand size={17}/>{heldName?'DROP':'PICK UP'}</button><button type="button" className="stage6-run" onPointerDown={()=>{input.current.run=true}} onPointerUp={()=>{input.current.run=false}} onPointerLeave={()=>{input.current.run=false}}>RUN</button></div>
+  {gameStarted&&<div className="stage6-hud stage6-bottom"><span><Move size={12}/> MOVE</span><span><RotateCcw size={12}/> DRAG TO LOOK</span><span><Box size={12}/> {objectCount} PHYSICS PROXIES</span><span><Info size={12}/> INFERRED PARTS ARE APPROXIMATIONS</span></div>
   {!ready&&!error&&<div className="stage6-loading"><div className="stage6-loader"/><b>{status}</b><small>BUILDING PHOTO-DERIVED RELIEF + INTERACTIVE OBJECT COLLIDERS</small></div>}
-  {paused&&<div className="stage6-pause"><b>WORLD PAUSED</b><button type="button" onClick={()=>setPaused(false)}>RESUME EXPLORATION</button><button type="button" onClick={exitGame}>EXIT WORLD</button></div>}
+  {gameStarted&&paused&&<div className="stage6-pause"><b>WORLD PAUSED</b><button type="button" onClick={()=>setPaused(false)}>RESUME EXPLORATION</button><button type="button" onClick={exitGame}>EXIT WORLD</button></div>}
  </div>;
 }
